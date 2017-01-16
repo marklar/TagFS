@@ -1,7 +1,7 @@
 {-# LANGUAGE UnicodeSyntax #-}
 module Main where
 
-import Lib
+import DbTinker
 
 main ∷ IO ()
-main = runFuse
+main = dbTinker
