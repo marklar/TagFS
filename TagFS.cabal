@@ -17,17 +17,16 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
                      , HdbcDb
+                     , Find
+                     , Insert
                      , Model
+                     , Tag
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , HDBC-sqlite3
                      , HDBC
                      , HFuse
                      , hashmap
-                     -- , persistent
-                     -- , persistent-sqlite
-                     -- , persistent-template
-                     -- , resource-pool
                      , split
                      , unix
                      , unordered-containers

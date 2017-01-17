@@ -8,7 +8,10 @@ import           Database.HDBC
 import           Database.HDBC.Sqlite3
 import           Control.Monad.IO.Class  (liftIO)
 
+import           Find
+import           Insert
 import           Model
+import           Tag
 
 
 addFiles ∷ Connection → IO ()
@@ -35,33 +38,3 @@ addSomeData conn = do
   r ← quickQuery' conn getFileTagsSql []
   liftIO $ Prelude.putStrLn "file_tags:"
   liftIO $ print r
-
-
------------------------
-  -- -- get File IDs
-  -- let getFileSql = "SELECT * from file WHERE name = ? LIMIT 1"
-  -- [[footballIdSql : _], [futbolIdSql : _]] ←
-  --   mapM (\s → quickQuery' conn getFileSql [toSql s]) (["football.txt", "futbol.txt"] ∷ [String])
-  -- let [footballId, futbolId] =
-  --       fmap (\v → (fromSql v) ∷ Integer) [footballIdSql, futbolIdSql]
-
-  -- -- get Tag IDs
-  -- let getTagSql = "SELECT * from tag WHERE name = ? LIMIT 1"
-  -- [ [(sportsIdSql:_)], [(barcaIdSql:_)], [(packersIdSql:_)] ] ←
-  --   mapM (\s → quickQuery' conn getTagSql [toSql s]) (["sports", "barca", "packers"] ∷ [String])
-  -- let [sportsId, barcaId, packersId] =
-  --       fmap (\s → (fromSql s) ∷ Integer) [ sportsIdSql
-  --                                         , barcaIdSql
-  --                                         , packersIdSql
-  --                                         ]
-
-  -- -- FileTags
-  -- fileTagStmt ← prepare conn "INSERT INTO file_tag VALUES (?, ?, ?)"
-  -- mapM_ (\(fileId, tagId) → execute fileTagStmt [SqlNull, toSql fileId, toSql tagId])
-  --   [ (footballId, sportsId)
-  --   , (footballId, packersId)
-  --   , (futbolId, sportsId)
-  --   , (futbolId, barcaId)
-  --   ]
-  -- commit conn
-
