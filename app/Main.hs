@@ -1,7 +1,15 @@
 {-# LANGUAGE UnicodeSyntax #-}
 module Main where
 
-import DbTinker
+import           Database.HDBC
+import           Database.HDBC.Sqlite3
+import           HdbcDb
+import           Model
+
 
 main ∷ IO ()
-main = dbTinker
+main = do
+  createDb "flurbl.db"
+  conn <- connectSqlite3 "flurbl.db"
+  addSomeData conn
+  disconnect conn

@@ -1,21 +1,30 @@
 
-## Hiearchical System
+# TagFS — Tag Semantics for Hierarchical File Systems
+
+http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.60.4187&rep=rep1&type=pdf
+
+## vs. Traditional (Hiearchical) Systems
+
+### Tradition System
 
 file allocation table:
 + index structure providing a mapping
 + k: access path.  v: corresponding blocks of info
 
-structure off access paths (e.g. /foo/bar/baz.txt)
+structure of access paths (e.g. /foo/bar/baz.txt)
 -> perceived organization of files into dirs
 
 path - decomposable into seq of dirs + file name
 
-## Tagging System
+### Tagging System
 
 tag:
 + UNARY predicate over resources (i.e. not k:v). easier transition
   from traditional FSs.
 + imply set - combine w/ union, intersection, complement
+
+
+## Retrieval
 
 the view of a directory: union of these 2 functions:
 + view       :: Location -> [File]

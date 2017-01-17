@@ -79,4 +79,3 @@ Defines marshaling: Hs datatype <=> PersistValue
 
 PersistEntity instance ~ DB table
 
-
