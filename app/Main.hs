@@ -9,7 +9,8 @@ import           Model
 
 main ∷ IO ()
 main = do
-  createDb "flurbl.db"
+  -- createDb "flurbl.db"
   conn <- connectSqlite3 "flurbl.db"
-  addSomeData conn
+  -- addSomeData conn
+  viewData conn
   disconnect conn

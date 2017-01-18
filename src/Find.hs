@@ -7,10 +7,19 @@ import           Database.HDBC.Sqlite3
 import           Model
 
 
+fileNamesFromTagId ∷ Connection → TagId → IO [FileName]
+fileNamesFromTagId conn tagId = do
+  r ← quickQuery' conn ("SELECT files.name " ++
+                        "FROM   files, files_tags " ++
+                        "WHERE  files_tags.tag_id = ? " ++
+                        "AND    files.id = files_tags.file_id") [toSql tagId]
+  return (map (\(res:_) → fromSql res) r)
+
+
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
 fileFromName ∷ Connection → FileName → IO (Maybe FileEntity)
 fileFromName conn name = do
-  r ← quickQuery' conn "SELECT * from file WHERE name = ? LIMIT 1" [toSql name]
+  r ← quickQuery' conn "SELECT * FROM files WHERE name = ? LIMIT 1" [toSql name]
   case r of
     [] → return Nothing
     [id, name, contents] : _ →
@@ -20,7 +29,7 @@ fileFromName conn name = do
 
 tagFromName ∷ Connection → TagName → IO (Maybe TagEntity)
 tagFromName conn tagName = do
-  r ← quickQuery' conn "SELECT * from tag WHERE name = ? LIMIT 1" [toSql tagName]
+  r ← quickQuery' conn "SELECT * FROM tags WHERE name = ? LIMIT 1" [toSql tagName]
   case r of
     [] → return Nothing
     [id, name] : _ →

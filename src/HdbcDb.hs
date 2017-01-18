@@ -34,7 +34,11 @@ addSomeData conn = do
   multiTagFile conn "football.txt" ["sports", "packers"]
   multiTagFile conn "futbol.txt"   ["sports", "barca"]
 
-  let getFileTagsSql = "SELECT * from file_tag" -- , ORDER BY id, asc"
-  r ← quickQuery' conn getFileTagsSql []
-  liftIO $ Prelude.putStrLn "file_tags:"
-  liftIO $ print r
+
+viewData ∷ Connection → IO ()
+viewData conn = do
+  r ← quickQuery' conn "SELECT id, name FROM tags" []
+  flip mapM_ r (\[tagId, tagName] → do
+                   liftIO $ print (fromSql tagName ∷ String)
+                   fileNames ← fileNamesFromTagId conn (fromSql tagId)
+                   print fileNames)

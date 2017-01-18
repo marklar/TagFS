@@ -9,20 +9,20 @@ import           Model
 
 mkFile ∷ Connection → File → IO ()
 mkFile conn (File name contents) = do
-  stmt ← prepare conn "INSERT INTO file VALUES (?, ?, ?)"
+  stmt ← prepare conn "INSERT INTO files VALUES (?, ?, ?)"
   execute stmt [SqlNull, toSql name, toSql contents]
   commit conn
 
 
 mkTag ∷ Connection → Tag → IO ()
 mkTag conn (Tag name) = do
-  stmt ← prepare conn "INSERT INTO tag VALUES (?, ?)"
+  stmt ← prepare conn "INSERT INTO tags VALUES (?, ?)"
   execute stmt [SqlNull, toSql name]
   commit conn
 
 
 mkFileTag ∷ Connection → FileId → TagId → IO ()
 mkFileTag conn fileId tagId = do
-  stmt ← prepare conn "INSERT INTO file_tag VALUES (?, ?, ?)"
+  stmt ← prepare conn "INSERT INTO files_tags VALUES (?, ?, ?)"
   execute stmt [SqlNull, toSql fileId, toSql tagId]
   commit conn
