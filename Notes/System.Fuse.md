@@ -60,6 +60,9 @@ options:
 ### cmd-line opts?
 
 
+### Good notes
+
+https://www.cs.hmc.edu/~geoff/classes/hmc.cs135.201001/homework/fuse/fuse_doc.html
 
 ### Operations
 
@@ -67,7 +70,7 @@ options:
   - init - Initializes the FS. Called before all other operations.
   - destroy - Called on FS exit to allow cleanup.
 + general inodes
-  - getFileStat (lstat) - info about inode (number, owner, last access)
+  - getFileStat (lstat, getattr) - info about inode (number, owner, last access)
   - createDevice (mknod) - creates file (either regular or special)
   - rename (mv)
   - setFileMode (chmod)

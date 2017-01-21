@@ -2,6 +2,8 @@
 
 module Find where
 
+import           Control.Monad
+import           Data.Maybe
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
 import           Model
@@ -17,21 +19,51 @@ fileNamesFromTagId conn tagId = do
 
 
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
-fileFromName ∷ Connection → FileName → IO (Maybe FileEntity)
+fileFromName ∷ Connection → FileName → IO (Maybe Entity)
 fileFromName conn name = do
-  r ← quickQuery' conn "SELECT * FROM files WHERE name = ? LIMIT 1" [toSql name]
-  case r of
-    [] → return Nothing
-    [id, name, contents] : _ →
+  maybeRow ← findRowByName conn "files" name
+  case maybeRow of
+    Nothing →
+      return Nothing
+    Just [id, _, contents] →
       return $ Just (FileEntity (fromSql id)
-                      (File (fromSql name) (fromSql contents)))
+                      (File name (fromSql contents)))
 
 
-tagFromName ∷ Connection → TagName → IO (Maybe TagEntity)
-tagFromName conn tagName = do
-  r ← quickQuery' conn "SELECT * FROM tags WHERE name = ? LIMIT 1" [toSql tagName]
+tagFromName ∷ Connection → TagName → IO (Maybe Entity)
+tagFromName conn name = do
+  maybeRow ← findRowByName conn "tags" name
+  case maybeRow of
+    Nothing →
+      return Nothing
+    Just [id, _] →
+      return . Just $ TagEntity (fromSql id) $ Tag name
+
+
+-----------------------
+
+
+fileExists ∷ Connection → FileName → IO Bool
+fileExists = rowByNameExists "files"
+
+
+tagExists ∷ Connection → TagName → IO Bool
+tagExists = rowByNameExists "tags"
+
+
+rowByNameExists ∷ String → Connection → String → IO Bool
+rowByNameExists tableName conn nameVal =
+  liftM isJust $ findRowByName conn tableName nameVal
+
+
+findRowByName ∷ Connection → String → String → IO (Maybe [SqlValue])
+findRowByName conn tableName name = do
+  r ← quickQuery' conn ("SELECT * " ++
+                        "FROM   ? " ++
+                        "WHERE  name = ? " ++
+                        "LIMIT  1")
+      [toSql tableName, toSql name]
   case r of
     [] → return Nothing
-    [id, name] : _ →
-      return . Just $ TagEntity (fromSql id) $ Tag (fromSql name)
-
+    vals : _ →
+      return $ Just vals

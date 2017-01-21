@@ -19,6 +19,9 @@ example Hs code:
 https://github.com/cgag/haskell-fuse-test
 (in-memory filesystem)
 
+Haskell FUSE example:
+https://github.com/timbod7/secretfs
+
 libfuse reference impl (C):
 https://github.com/libfuse/libfuse
 
@@ -28,9 +31,14 @@ http://www.ibm.com/developerworks/linux/library/l-fuse/
 
 ## Other Impls
 
-https://www.youtube.com/watch?v=JQWU0h12huc
+Haskell:
+https://github.com/ffwng/tagfs
+Rather than a DB, it uses "tag files".
+e.g. "myFile.txt" has an associated "myFile.txt.tags", w/ one tag per line
 
 https://github.com/marook/tagfs
+
+https://www.youtube.com/watch?v=JQWU0h12huc
 
 http://tmsu.org/
 

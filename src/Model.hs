@@ -17,18 +17,20 @@ data File = File { fileName ∷ FileName
                  , fileContents ∷ ByteString
                  }
             deriving (Show)
-data FileEntity = FileEntity { fileId ∷ Integer
-                             , file ∷ File
-                             }
-                deriving (Show)
 
 data Tag = Tag TagName
          deriving (Show)
 
-data TagEntity = TagEntity { tagId ∷ Integer
-                           , tag ∷ Tag
-                           }
-               deriving (Show)
+
+data Entity
+  = TagEntity { tagId ∷ Integer
+              , tag ∷ Tag
+              }
+  | FileEntity { fileId ∷ Integer
+               , file ∷ File
+               }
+  deriving (Show)
+
 
 -- unused?
 data FileTag = FileTag { fId ∷ FileId
@@ -36,20 +38,36 @@ data FileTag = FileTag { fId ∷ FileId
                        }                 
              deriving (Show)
 
+
 createDb ∷ String → IO ()
 createDb dbName = do
   conn <- connectSqlite3 dbName
+
   run conn ("CREATE TABLE tags " ++
             "(id INTEGER PRIMARY KEY," ++
-            " name VARCHAR NOT NULL)") []
+            " name VARCHAR NOT NULL UNIQUE)") []
+
+  -- TODO: Add attributes to Files (perhaps in 2 separate tables).
+  -- file metadata
+  --   absolute path
+  --   length
+  --   mtime, ctime, atime
+  --   inode (int)
+  -- file contents
+  --   sha (text)
+  --   data (blob)
+  --   length (int)
+  --   compressed (blob)
   run conn ("CREATE TABLE files " ++
             "(id INTEGER PRIMARY KEY," ++
             " name VARCHAR NOT NULL," ++
             " contents BLOB NOT NULL)") []
+
   run conn ("CREATE TABLE files_tags " ++
             "(id INTEGER PRIMARY KEY," ++
             " file_id INTEGER NOT NULL REFERENCES files," ++
             " tag_id INTEGER NOT NULL REFERENCES tags," ++
             " CONSTRAINT unique_file_tag UNIQUE (file_id, tag_id))") []
+
   commit conn
   disconnect conn

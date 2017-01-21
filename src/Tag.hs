@@ -36,12 +36,18 @@ tagFile conn fileName tagName = do
 ------------------
 
 -- FIXME: What if FileTagEntity already exists?
-findOrCreateFileTag ∷ Connection -> FileEntity → TagEntity → IO ()
+findOrCreateFileTag ∷ Connection
+                    → Entity   -- ^ File
+                    → Entity   -- ^ Tag
+                    → IO ()
 findOrCreateFileTag conn (FileEntity fileId _) (TagEntity tagId _) =
   mkFileTag conn fileId tagId
   
 
-createFileTag ∷ Connection → FileEntity → TagName → IO ()
+createFileTag ∷ Connection
+              → Entity      -- ^ File
+              → TagName
+              → IO ()
 createFileTag conn (FileEntity fileId _) tagName = do
   -- It *should* exist here.
   maybeTagEntity ← tagFromName conn tagName

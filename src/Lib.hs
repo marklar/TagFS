@@ -28,22 +28,35 @@ debugFile = "/home/cgag/src/fuse/haskell/debug"
 dbg msg = B.appendFile debugFile (msg <> "\n")
 
 
+-- contents:
+--   Dir:  FilePath → Entry
+--   File: blob
 data Contents = Dir  { d_contents ∷ M.HashMap FilePath Entry }
               | File { f_contents ∷ !ByteString }
               deriving Show
 
+-- Both Dirs and Files have FileStats (from FUSE).
+-- They have different Contents.
 data Entry = Entry
     { stat ∷ FileStat
     , contents ∷ Contents
     } deriving Show
 
 
+{- | Does nothing, really. This action uses an Either, so returns a
+   Right _. It must return a filehandle-like value which FUSE ignores
+   but simply passes back to us to use in other operations.
+-}
 helloOpen :: FilePath
-          -> OpenMode
-          -> OpenFileFlags
+          -> OpenMode         -- FUSE: ReadOnly | WriteOnly | ReadWrite
+          -> OpenFileFlags    -- FUSE: append | exclusive | noctty | nonBlock | trunc
           -> IO (Either Errno DUMMY)
 helloOpen fpath mode flags = return (Right DUMMY)
 
+
+{- | In case of success, must return ByteCount bytes of the ByteString
+   contents of a file.
+-}
 helloRead :: FileStore
           -> FilePath
           -> DUMMY
@@ -78,12 +91,12 @@ helloReadDirectory fileStore fpath =
   where
     fileList = M.foldlWithKey' (\acc k v -> (k, stat v):acc) []
 
-helloCreateDevice :: FileStore
-                  -> FilePath
-                  -> EntryType
-                  -> FileMode
-                  -> DeviceID
-                  -> IO Errno
+helloCreateDevice :: FileStore   -- MVar w/ map: FilePath → Entry
+                  -> FilePath    -- FilePath ~ String
+                  -> EntryType   -- FUSE: The Unix type of a node in the filesystem (e.g. RegularFile, Directory, etc.).
+                  -> FileMode    -- System.Posix.Types
+                  -> DeviceID    -- System.Posix.Types
+                  -> IO Errno    -- Foreign.C.Error
 helloCreateDevice fileStore fpath entryType mode did = do
     dbg ("creating device with path: " <> B.pack fpath)
     ctx <- getFuseContext
@@ -91,6 +104,7 @@ helloCreateDevice fileStore fpath entryType mode did = do
     case entryType of
         RegularFile -> do
             let (fname:restOfPath) = filter (/= "") . splitOn "/" $ fpath
+            -- functional update: i.e., the std FileStat, except setting statFileMode
             let newStat = (fileStat ctx) { statFileMode = mode }
             _ <- swapMVar fileStore (M.insert fname (Entry newStat (File "")) fileMap)
             return eOK
@@ -210,8 +224,11 @@ helloRemoveLink fileStore fpath = do
 
 
 
--- TODO: understand and anki all these olptions
+-- TODO: understand and anki all these options
 dirStat ctx = FileStat { statEntryType = Directory
+                       -- unionFileModes ∷ FileMode → FileMode → FileMode
+                       -- Combines the 2 file modes into 1 that contains modes that appear in either.
+                       -- `FileMode`s are in System.Posix.Files
                        , statFileMode = foldr1 unionFileModes
                                           [ ownerReadMode
                                           , ownerExecuteMode
@@ -222,6 +239,11 @@ dirStat ctx = FileStat { statEntryType = Directory
                                           , otherExecuteMode
                                           ]
                        , statLinkCount = 2
+                       -- data FuseContext = FuseContext
+                       --     { fuseCtxUserID :: UserID
+                       --     , fuseCtxGroupID :: GroupID
+                       --     , fuseCtxProcessID :: ProcessID
+                       --     }
                        , statFileOwner = fuseCtxUserID ctx
                        , statFileGroup = fuseCtxGroupID ctx
                        , statSpecialDeviceID = 0
@@ -233,6 +255,9 @@ dirStat ctx = FileStat { statEntryType = Directory
                        }
 
 fileStat ctx = FileStat { statEntryType = RegularFile
+                        -- unionFileModes ∷ FileMode → FileMode → FileMode
+                        -- Combines the 2 file modes into 1 that contains modes that appear in either.
+                        -- `FileMode`s are in System.Posix.Files
                         , statFileMode = foldr1 unionFileModes
                                            [ ownerReadMode
                                            , ownerWriteMode
@@ -253,11 +278,20 @@ fileStat ctx = FileStat { statEntryType = RegularFile
 
 runFuse :: IO ()
 runFuse = do
+  -- Context of the program doing the current FUSE call.
+  -- Provides the userID and groupID.
     ctx <- getFuseContext
 
+  -- Create an MVar containing a strict hashmap.
+  -- From file/dir name to Entry.
+  -- (An Entry consists of a `stat` and `contents`.)
     fileList <- newMVar (M.fromList
-                          [(".",  Entry {stat=dirStat ctx, contents=(Dir M.empty)})
-                          ,("..", Entry {stat=dirStat ctx, contents=(Dir M.empty)})
+                          [(".",  Entry { stat = dirStat ctx
+                                        , contents = Dir M.empty
+                                        })
+                          ,("..", Entry { stat = dirStat ctx
+                                        , contents = Dir M.empty
+                                        })
                           ])
 
     fuseMain (buildOps fileList) defaultExceptionHandler
@@ -266,15 +300,15 @@ runFuse = do
     buildOps fileStore =
         defaultFuseOps
             {
-              fuseOpen               = helloOpen
-            , fuseAccess             = helloAccess
-            , fuseGetFileSystemStats = helloGetFileSystemStats
-            , fuseOpenDirectory      = helloOpenDirectory
+              fuseOpen               = helloOpen                       -- does nothing; returns Right DUMMY
+            , fuseAccess             = helloAccess                     -- does nothing; eOK
+            , fuseGetFileSystemStats = helloGetFileSystemStats         -- does nothing: dummy FS stat record
+            , fuseOpenDirectory      = helloOpenDirectory              -- return eNOENT (Foreign.C.Error)
 
-            , fuseRead               = helloRead fileStore
-            , fuseReadDirectory      = helloReadDirectory fileStore
-            , fuseGetFileStat        = helloGetFileStat fileStore
-            , fuseCreateDevice       = helloCreateDevice fileStore
+            , fuseRead               = helloRead fileStore             -- if file, contents. if dir, a static str.
+            , fuseReadDirectory      = helloReadDirectory fileStore    -- if '/', returns map: path → stat
+            , fuseGetFileStat        = helloGetFileStat fileStore      -- return FileStat (if matching)
+            , fuseCreateDevice       = helloCreateDevice fileStore     -- creates a file
             , fuseWrite              = helloWrite fileStore
             , fuseRelease            = \_ _ -> return ()
             , fuseRemoveLink         = helloRemoveLink fileStore
