@@ -1,12 +1,13 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module Find where
+module DataStore.Find where
 
-import           Control.Monad
-import           Data.Maybe
-import           Database.HDBC
-import           Database.HDBC.Sqlite3
-import           Model
+import           Control.Monad            (liftM)
+import           Data.Maybe               (isJust)
+import           Database.HDBC            (SqlValue, quickQuery', fromSql, toSql)
+import           Database.HDBC.Sqlite3    (Connection)
+
+import           DataStore.Model
 
 
 fileNamesFromTagId ∷ Connection → TagId → IO [FileName]
@@ -67,3 +68,4 @@ findRowByName conn tableName name = do
     [] → return Nothing
     vals : _ →
       return $ Just vals
+

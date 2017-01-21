@@ -5,10 +5,8 @@ module FuseOps where
 
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
-
 import           Data.ByteString         (ByteString)
 import qualified Data.ByteString.Char8   as B
-import           Data.List.Split         (splitOn)
 import           Data.Maybe
 import           Control.Monad
 import           Data.Monoid             ((<>))
@@ -18,34 +16,19 @@ import           System.IO
 import           System.Posix.Files
 import           System.Posix.Types
 
-import           Find
-import           Model
+import           Debug                   (dbg)
+import           DataStore.Find
+import           DataStore.Model
+import           Entry
+import           Parse
 import           Stat                    ( dirStat, fileStat
                                          , tagGetFileSystemStats
                                          )
+import           Types
 
 
 -- Question: store the file contents in the DB, or use the actual FS?
 -- If in the actual FS, how?
-
-data NonHandle = NonHandle
-
-
--- Debugging. Instrument fns w/ log output to see what's happening.
--- IMPORTANT!!! Must be absolute path.
-debugFile ∷ FilePath
-debugFile = "/Users/markwong-vanharen/Development/TagFS/debug.log"
-
-dbg ∷ ByteString → IO ()
-dbg msg = B.appendFile debugFile (msg <> "\n")
-
-
--- Each Entry, whether Dir or File, has a FileStat (from FUSE).
--- Files also have contents.
-data Entry = FileEntry FileStat !ByteString
-           | DirEntry  FileStat
-  deriving Show
-
 
 --------------------
 
@@ -89,6 +72,57 @@ runFuse dbConn = do
               -- fuseInit
               -- fuseDestroy
               }
+
+{- | getattr(const char* path, struct stat* stbuf)
+
+Return file attributes. The "stat" structure is described in detail in
+the stat(2) manual page. For the given pathname, this should fill in
+the elements of the "stat" structure. If a field is meaningless or
+semi-meaningless (e.g., st_ino) then it should be set to 0 or given a
+"reasonable" value. This call is pretty much required for a usable
+filesystem.
+-}
+
+{- | getattr: info about inode (number, owner, last access)
+   Should work for either Files or Dirs.
+   (Perhaps 'FileStat' should be renamed to 'NodeStat'?)
+-}
+tagGetFileStat ∷ Connection → FilePath → IO (Either Errno FileStat)
+tagGetFileStat dbConn filePath = do
+  dbg $ "GetFileStat: " <> B.pack filePath
+
+  case filePath of
+
+    -- Root dir:
+    -- Special case, as it's the absence of any tags.
+    -- But are we allowed to have any untagged files?
+    -- Or do we show all the files as part of the root dir?
+    "/" → do
+      ctx ← getFuseContext
+      dbg "  for '/'"
+      return $ Right (dirStat ctx)
+
+    -- Look up just by the fileName
+    _ → do
+      let (fileName:restOfPath) = pathParts filePath
+      dbg $ "  finding file of name: " <> B.pack fileName
+      
+      maybeEntry ← findEntryByName dbConn fileName
+      
+      case maybeEntry of
+
+        Nothing → do
+          dbg $ "  Failed to find " <> B.pack fileName
+          return (Left eNOENT)
+
+        Just (FileEntry stat _) → do
+          dbg "  Found file"
+          return (Right stat)
+
+        Just (DirEntry stat) → do
+          dbg "  Found dir"
+          error "need a function that recursively looks up stats"
+
 
 --------------------
 
@@ -158,36 +192,6 @@ tagRead dbConn filePath handle bc offset = do
 
 -------------------
 
-
-findEntryByName ∷ Connection → String → IO (Maybe Entry)
-findEntryByName dbConn name = do
-  maybeFile ← findFileByName dbConn name
-  if isJust maybeFile
-    then return maybeFile
-    else findTagByName dbConn name
-
-
-findFileByName ∷ Connection → String → IO (Maybe Entry)
-findFileByName dbConn name =
-  fileFromName dbConn name >>= entityToEntry
-
-
-findTagByName ∷ Connection → String → IO (Maybe Entry)
-findTagByName dbConn name =
-  tagFromName dbConn name >>= entityToEntry
-
-
-entityToEntry ∷ Maybe Entity → IO (Maybe Entry)
-entityToEntry maybeEntity = do
-  ctx ← getFuseContext
-  case maybeEntity of
-    Just (FileEntity _ (File _ contents)) →
-      return $ Just $ FileEntry (fileStat ctx) contents
-    Just (TagEntity _ (Tag _)) →
-      return $ Just $ DirEntry (dirStat ctx)
-    Nothing →
-      return Nothing
-  
   
 --------------------
 
@@ -214,8 +218,8 @@ tagReadDir dbConn filePath = do
   dbg $ "ReadDir: " <> B.pack filePath
 
   ctx ← getFuseContext
-  return $ Right [ (".",  (dirStat ctx))
-                 , ("..", (dirStat ctx))
+  return $ Right [ (".",  dirStat ctx)
+                 , ("..", dirStat ctx)
                  ]
   -- filesAndStats ← getFilesAndStats dbConn filePath
   -- return $ case filesAndStats of
@@ -254,11 +258,6 @@ tagCreateDevice dbConn filePath entryType mode deviceId = do
     _ → do
       dbg $ "Failed to create unknown device type with path: " <> B.pack filePath
       return eNOENT
-
-
-pathParts ∷ FilePath → [String]
-pathParts filePath =
-  filter (/= "") . splitOn "/" $ filePath
 
 
 -- TODO
@@ -305,59 +304,6 @@ tagOpenDir dbConn filePath = do
             if ex
               then return eOK
               else return eNOENT
-
-
---------------------
-
-{- | getattr(const char* path, struct stat* stbuf)
-
-Return file attributes. The "stat" structure is described in detail in
-the stat(2) manual page. For the given pathname, this should fill in
-the elements of the "stat" structure. If a field is meaningless or
-semi-meaningless (e.g., st_ino) then it should be set to 0 or given a
-"reasonable" value. This call is pretty much required for a usable
-filesystem.
--}
-
-{- | getattr: info about inode (number, owner, last access)
-   Should work for either Files or Dirs.
-   (Perhaps 'FileStat' should be renamed to 'NodeStat'?)
--}
-tagGetFileStat ∷ Connection → FilePath → IO (Either Errno FileStat)
-tagGetFileStat dbConn filePath = do
-  dbg $ "GetFileStat: " <> B.pack filePath
-
-  case filePath of
-
-    -- Root dir:
-    -- Special case, as it's the absence of any tags.
-    -- But are we allowed to have any untagged files?
-    -- Or do we show all the files as part of the root dir?
-    "/" → do
-      ctx ← getFuseContext
-      dbg "  for '/'"
-      return $ Right (dirStat ctx)
-
-    -- Look up just by the fileName
-    _ → do
-      let (fileName:restOfPath) = pathParts filePath
-      dbg $ "  finding file of name: " <> B.pack fileName
-      
-      maybeEntry ← findEntryByName dbConn fileName
-      
-      case maybeEntry of
-
-        Nothing → do
-          dbg $ "  Failed to find " <> B.pack fileName
-          return (Left eNOENT)
-
-        Just (FileEntry stat _) → do
-          dbg "  Found file"
-          return (Right stat)
-
-        Just (DirEntry stat) → do
-          dbg "  Found dir"
-          error "need a function that recursively looks up stats"
 
 
 --------------------

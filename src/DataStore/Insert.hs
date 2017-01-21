@@ -1,10 +1,11 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module Insert where
+module DataStore.Insert where
 
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
-import           Model
+
+import           DataStore.Model
 
 
 mkFile ∷ Connection → File → IO ()

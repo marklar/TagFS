@@ -6,8 +6,10 @@ module Stat
   , tagGetFileSystemStats
   ) where
 
+
 import           System.Fuse
 import           System.Posix.Files   -- for file modes
+import           Debug                   (dbg)
 
 
 -- ^ What should these be?

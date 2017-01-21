@@ -15,14 +15,17 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     DataStore.Model
+                     , DataStore.Create
+                     , DataStore.Find
+                     , DataStore.Insert
+                     , Debug
+                     , Entry
                      , FuseOps
+                     , Parse
                      , Stat
-                     , Find
-                     , HdbcDb
-                     , Insert
-                     , Model
                      , Tag
+                     , Types
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , HDBC-sqlite3

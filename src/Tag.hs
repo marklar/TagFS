@@ -4,9 +4,10 @@ module Tag where
 
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
-import           Find
-import           Insert
-import           Model
+
+import           DataStore.Find
+import           DataStore.Insert
+import           DataStore.Model
 
 
 multiTagFile ∷ Connection → FileName → [TagName] → IO ()
