@@ -41,31 +41,38 @@ runFuse db = do
   where
     fuseOps ∷ FuseOperations NonHandle
     fuseOps = defaultFuseOps
-              { fuseGetFileStat        = getFileStat db
-              -- fuseReadSymbolicLink
-              , fuseCreateDevice       = tCreateDevice db
-              , fuseCreateDirectory    = createDir db
-              , fuseRemoveLink         = tRemoveLink db
+              { fuseGetFileSystemStats = Stat.getFileSystemStats
+
+              -- Dir
+              , fuseCreateDirectory    = Dir.createDir db
+              , fuseOpenDirectory      = Dir.openDir db
+              , fuseReadDirectory      = Dir.readDir db
               -- fuseRemoveDirectory
+
+              -- File
+              , fuseOpen               = File.tOpenFile db
+              , fuseRead               = File.tReadFile db
+              , fuseWrite              = File.tWriteFile db
+
+              -- Either
+              , fuseGetFileStat        = getFileStat db
+              , fuseAccess             = tAccess
+              , fuseCreateDevice       = tCreateDevice db
+              , fuseRemoveLink         = tRemoveLink db
+              , fuseSetFileTimes       = tSetFileTimes db
+
+              -- fuseReadSymbolicLink
               -- fuseCreateSymbolicLink
               -- fuseRename
               -- fuseCreateLink
               -- fuseSetFileMode
               -- fuseSetOwnerAndGroup
               -- fuseSetFileSize
-              , fuseSetFileTimes       = tSetFileTimes db
-              , fuseOpen               = tOpenFile
-              , fuseRead               = tReadFile db
-              , fuseWrite              = tWriteFile db
-              , fuseGetFileSystemStats = getFileSystemStats
               -- fuseFlush
               , fuseRelease            = \_ _ → return ()
               -- fuseSynchronizeFile
-              , fuseOpenDirectory      = openDir db
-              , fuseReadDirectory      = readDir db
               -- fuseReleaseDirectory
               -- fuseSynchronizeDirectory
-              , fuseAccess             = tAccess
               -- fuseInit
               -- fuseDestroy
               }

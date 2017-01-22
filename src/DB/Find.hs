@@ -10,14 +10,39 @@ import           Database.HDBC.Sqlite3    (Connection)
 import           DB.Model
 
 
-fileNamesFromTagId ∷ Connection → TagId → IO [FileName]
-fileNamesFromTagId conn tagId = do
-  r ← quickQuery' conn ("SELECT files.name " ++
-                        "FROM   files, files_tags " ++
-                        "WHERE  files_tags.tag_id = ? " ++
-                        "AND    files.id = files_tags.file_id") [toSql tagId]
-  return (map (\(res:_) → fromSql res) r)
+{- | Search DB for file w/ name and all its tag names.
+-}
+fileEntityFromTagsAndName ∷ Connection
+                          → [String]    -- ^ Tag names
+                          → FileName    -- ^ File name
+                          → IO (Maybe Entity)
+fileEntityFromTagsAndName conn tagNames name = do
+  allTagNames ← tagsForFileName conn name
+  if all (\n → elem n allTagNames) tagNames
+    then fileEntityNamed conn name
+    else return Nothing
 
+
+{- | Helper fn. Sometimes when you have the name of a file, you want to
+   know how it's tagged.
+-}
+tagsForFileName ∷ Connection → FileName → IO [TagName]
+tagsForFileName conn fileName = do
+  maybeFileEntity ← fileEntityNamed conn fileName
+  case maybeFileEntity of
+    Nothing →
+      return []
+    Just (FileEntity fileId _) → do
+      r ← quickQuery' conn ( "SELECT     ts.name " ++
+                             "FROM       tags ts " ++
+                             "INNER JOIN files_tags fts " ++
+                             "ON         ts.id = fts.tag_id " ++
+                             "AND        fts.file_id = ?"
+                           ) [toSql fileId]
+      return $ map (fromSql . head) r
+
+
+-------------------------
 
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
 fileEntityNamed ∷ Connection → FileName → IO (Maybe Entity)

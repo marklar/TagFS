@@ -9,6 +9,7 @@ module File
 
 import           Data.ByteString         (ByteString)
 import qualified Data.ByteString.Char8   as B
+import           Data.Maybe              (isJust)
 import           Data.Monoid             ((<>))
 
 import           System.Fuse
@@ -18,79 +19,69 @@ import           System.Posix.Types
 
 import           DB.Find
 import           DB.Model
+import           DB.Insert               (updateFile)
 import           Debug                   (dbg)
 import           Node                    (fileNodeNamed)
 import           Parse
+import           Stat
 import           Types
 
 
-{- | https://www.cs.hmc.edu/~geoff/classes/hmc.cs135.201001/homework/fuse/fuse_doc.html
+{- | Open a file. Just check for existence and permissions and return
+   either success or an error code.
 
-open(const char* path, struct fuse_file_info* fi)
-
-Open a file. If you aren't using file handles, this function should
-just check for existence and permissions and return either success or
-an error code. If you use file handles, you should also allocate any
-necessary structures and set fi->fh. In addition, fi has some other
-fields that an advanced filesystem might find useful; see the
-structure definition in fuse_common.h for very brief commentary.
+   Success here means a Right of a filehandle-like value. That FH-like
+   value is ignored by FUSE. Fuse simply passes back to us to use in
+   other operations.
 -}
-
-{- | Does nothing, really. Since this action uses an Either, it returns
-   a Right of a filehandle-like value. That FH-like value is ignored
-   by FUSE. Fuse simply passes back to us to use in other operations.
--}
-tOpenFile ∷ FilePath
+tOpenFile ∷ DB
+          → FilePath
           → OpenMode         -- FUSE: ReadOnly | WriteOnly | ReadWrite
           → OpenFileFlags    -- FUSE: append | exclusive | noctty | nonBlock | trunc
           → IO (Either Errno NonHandle)
-tOpenFile filePath mode flags = do
-  let (_:fileName) = filePath
-  dbg $ "Opening " ++ fileName
-  return (Right NonHandle)
+tOpenFile db filePath mode flags = do
+  dbg $ "Opening " ++ filePath
+  maybeEntity ← fileEntityFromPath db filePath
+  if isJust maybeEntity
+    then return (Right NonHandle)
+    else return $ Left eNOENT
 
 
 ------------------------
 
 
-{- | https://www.cs.hmc.edu/~geoff/classes/hmc.cs135.201001/homework/fuse/fuse_doc.html
+{- | First, check for existence and readability.
 
-read(const char* path, char *buf, size_t size, off_t offset, struct fuse_file_info* fi)
-
-Read sizebytes from the given file into the buffer buf, beginning
-offset bytes into the file. See read(2) for full details. Returns the
-number of bytes transferred, or 0 if offset was at or beyond the end
-of the file. Required for any sensible filesystem.
+   If readable, read 'bc' bytes from the given file starting at
+   'offset', and return as a ByteString.
 -}
-
-{- | In case of success, return 'bc' bytes of the ByteString contents of
-   a file.
--}
-tReadFile ∷ DB   -- db connection
+tReadFile ∷ DB
           → FilePath
           → NonHandle
           → ByteCount    -- System.Posix.Types
           → FileOffset   -- System.Posix.Types
           → IO (Either Errno ByteString)
-tReadFile db filePath handle bc offset = do
-  let (_:fileName) = filePath
-  dbg $ "Reading: " ++ fileName
-
-  maybeNode ← fileNodeNamed db fileName
-  case maybeNode of
-
-    Just (FileNode fStat contents) → do
-      dbg $ "  Read: " ++ fileName ++ ", got: " ++ B.unpack contents
-      return (Right contents)
-
-    Nothing → do
-      dbg $ "  Read: failed on " ++ fileName
-      return (Left eNOENT)
+tReadFile db filePath _ bc offset = do
+  dbg $ "ReadFile: " ++ filePath
+  maybeEntity ← fileEntityFromPath db filePath
+  case maybeEntity of
+    Nothing →
+      return $ Left eNOENT
+    Just (FileEntity fileId (File name contents)) → do
+      -- FIXME: Check readability permissions.
+      -- dbg $ "  Read: " ++ name ++ ", got: " ++ B.unpack contents
+      return .
+        Right .
+        B.take (fromIntegral bc) .
+        B.drop (fromIntegral offset) $
+        contents
 
 
 ------------------------
 
 
+{- | If find file (in proper dir), update its contents.
+-}
 tWriteFile ∷ DB
            → FilePath
            → NonHandle
@@ -100,26 +91,35 @@ tWriteFile ∷ DB
 tWriteFile db filePath _ bytes offset = do
   dbg $ "Write: " ++ filePath
 
-  let (_:fileName) = filePath
-
-  maybeEntity ← fileNodeNamed db fileName
+  maybeEntity ← fileEntityFromPath db filePath
   case maybeEntity of
     
     Nothing → do
-      dbg $ "  didn't find file (" ++ fileName ++ ")"
+      dbg $ "  didn't find file (" ++ filePath ++ ")"
       return (Left eNOENT)
 
-    Just (DirNode _) → do
-      dbg $ "  found dir (" ++ fileName ++ ")"
-      return (Left eNOENT)
-      
-    Just (FileNode fStat contents) → do
-      dbg $ "  found: -- " ++ fileName
-      writeFile fStat fileName contents
-
+    Just (FileEntity fileId (File name contents)) → do
+      dbg $ "  found: -- " ++ name
+      -- FIXME: need to store fStat in DB w/ file
+      ctx ← getFuseContext
+      writeFile (Stat.fileStat ctx) (File name contents)
   where
-    writeFile fStat fileName contents = do
+    writeFile fStat (File name contents) = do
       let contents' = B.take ((fromIntegral offset) - 1) contents <> bytes
           fileSize = fromIntegral . B.length $ contents'
-          fileNode = FileNode (fStat { statFileSize = fileSize }) contents'
+          -- fileNode = FileNode (fStat { statFileSize = fileSize }) contents'
+      updateFile db (File name contents')
       return $ Right (fromIntegral . B.length $ bytes)
+
+
+------------------------
+
+
+fileEntityFromPath ∷ DB → FilePath → IO (Maybe Entity)
+fileEntityFromPath db filePath = do
+  let (tagNames, maybeFileName) = parseFilePath filePath
+  case maybeFileName of
+    Nothing →
+      return $ Nothing
+    Just fileName → do
+      fileEntityFromTagsAndName db tagNames fileName

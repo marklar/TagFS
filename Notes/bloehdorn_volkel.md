@@ -40,7 +40,7 @@ query result ~ ([File], [SubFolder])
 data Query :: Query [Tag]   -- or Set, really
 
 
-### Delete
+### Delete (Remove)
 
 Remove last tag (or should it be ALL tags?)
 
