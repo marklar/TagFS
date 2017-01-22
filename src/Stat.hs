@@ -3,7 +3,7 @@
 module Stat
   ( dirStat
   , fileStat
-  , tagGetFileSystemStats
+  , getFileSystemStats
   ) where
 
 
@@ -13,8 +13,8 @@ import           Debug                   (dbg)
 
 
 -- ^ What should these be?
-tagGetFileSystemStats :: String -> IO (Either Errno FileSystemStats)
-tagGetFileSystemStats _ =
+getFileSystemStats :: String -> IO (Either Errno FileSystemStats)
+getFileSystemStats _ =
   return $ Right FileSystemStats { fsStatBlockSize = 512
                                  , fsStatBlockCount = 1
                                  , fsStatBlocksFree = 1

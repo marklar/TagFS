@@ -20,8 +20,10 @@ library
                      , DB.Find
                      , DB.Insert
                      , Debug
-                     , Entry
+                     , Dir
+                     , File
                      , FuseOps
+                     , Node
                      , Parse
                      , Stat
                      , Tag

@@ -1,10 +1,9 @@
-{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE UnicodeSyntax              #-}
 
 module DB.Create where
 
-import           Database.HDBC
-import           Database.HDBC.Sqlite3
+import           Database.HDBC           (run, commit, disconnect)
+import           Database.HDBC.Sqlite3   (connectSqlite3)
 
 import           DB.Model
 

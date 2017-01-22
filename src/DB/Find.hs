@@ -20,8 +20,8 @@ fileNamesFromTagId conn tagId = do
 
 
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
-fileFromName ∷ Connection → FileName → IO (Maybe Entity)
-fileFromName conn name = do
+fileEntityNamed ∷ Connection → FileName → IO (Maybe Entity)
+fileEntityNamed conn name = do
   maybeRow ← findRowByName conn "files" name
   case maybeRow of
     Nothing →
@@ -31,8 +31,8 @@ fileFromName conn name = do
                       (File name (fromSql contents)))
 
 
-tagFromName ∷ Connection → TagName → IO (Maybe Entity)
-tagFromName conn name = do
+tagEntityNamed ∷ Connection → TagName → IO (Maybe Entity)
+tagEntityNamed conn name = do
   maybeRow ← findRowByName conn "tags" name
   case maybeRow of
     Nothing →

@@ -15,14 +15,14 @@ multiTagFile db fileName tagNames =
 tagFile ∷ DB → FileName → TagName → IO ()
 tagFile db fileName tagName = do
   -- Find FileEntity. If ~∃, "<fileName>: No such file or directory"
-  maybeFileEntity ← fileFromName db fileName
+  maybeFileEntity ← fileEntityNamed db fileName
   case maybeFileEntity of
     Nothing →
       -- FIXME: Return error.
       return ()
     Just fileEntity → do
       -- Find or create TagEntity
-      maybeTagEntity ← tagFromName db tagName
+      maybeTagEntity ← tagEntityNamed db tagName
       case maybeTagEntity of
         Nothing → do
           mkTag db (Tag tagName)
@@ -48,7 +48,7 @@ createFileTag ∷ DB
               → IO ()
 createFileTag db (FileEntity fileId _) tagName = do
   -- It *should* exist here.
-  maybeTagEntity ← tagFromName db tagName
+  maybeTagEntity ← tagEntityNamed db tagName
   case maybeTagEntity of
     Nothing →
       -- FIXME: Should be error.

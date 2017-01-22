@@ -1,6 +1,11 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DB.Insert where
+module DB.Insert
+  ( mkFile
+  , mkTag
+  , mkFileTag
+  ) where
+
 
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
