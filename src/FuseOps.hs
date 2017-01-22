@@ -106,13 +106,16 @@ getFileStat db filePath = do
       dbg "  for '/'"
       return $ Right (dirStat ctx)
 
+
     -- Look up just by the fileName
     _ → do
+
+      -- FIXME: filePath might be *either*:
+      --   + just a directory (e.g. "sports/packers")
+      --   + a file (e.g. "sports/packers/football.txt"
       let (fileName:restOfPath) = pathParts filePath
-      dbg $ "  finding file of name: " ++ fileName
-      
+      dbg $ "  finding node of name: " ++ fileName
       maybeNode ← nodeNamed db fileName
-      
       case maybeNode of
 
         Nothing → do
@@ -125,7 +128,8 @@ getFileStat db filePath = do
 
         Just (DirNode stat) → do
           dbg "  Found dir"
-          error "need a function that recursively looks up stats"
+          -- error "need a function that recursively looks up stats"
+          return (Right stat)
 
 
 --------------------

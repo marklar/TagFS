@@ -5,6 +5,7 @@ module DB.Insert
   , mkTag
   , mkFileTag
   , updateFile
+  , rmFileTag
   ) where
 
 
@@ -44,4 +45,17 @@ mkFileTag conn fileId tagId = do
   stmt ← prepare conn ( "INSERT INTO files_tags " ++
                         "VALUES      (?, ?, ?)" )
   execute stmt [SqlNull, toSql fileId, toSql tagId]
+  commit conn
+
+
+rmFileTag ∷ Connection → FileId → TagName → IO ()
+rmFileTag conn fileId tagName = do
+  stmt ← prepare conn ( "DELETE " ++
+                        "FROM  files_tags " ++
+                        "WHERE file_id = ? " ++
+                        "AND   tag_id IN " ++
+                        "(SELECT id " ++
+                        " FROM   tags " ++
+                        " WHERE  name = ?)" )
+  execute stmt [toSql fileId, toSql tagName]
   commit conn

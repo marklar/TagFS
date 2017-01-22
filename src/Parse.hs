@@ -4,6 +4,7 @@
 module Parse where
 
 import           Data.List.Split         (splitOn)
+import           Data.List               (nub)
 
 -- FIXME
 import           DB.Model         (TagName, FileName)
@@ -17,12 +18,12 @@ parseFilePath path =
     [] →
       ([], Nothing)
     _ →
-      (init ps, Just $ last ps)
+      (nub $ init ps, Just $ last ps)
   where ps = pathParts path
 
 
 parseDirPath ∷ FilePath → [TagName]
-parseDirPath = pathParts
+parseDirPath = nub . pathParts
 
 
 pathParts ∷ FilePath → [String]

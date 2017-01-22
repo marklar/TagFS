@@ -40,7 +40,7 @@ tOpenFile ∷ DB
           → OpenFileFlags    -- FUSE: append | exclusive | noctty | nonBlock | trunc
           → IO (Either Errno NonHandle)
 tOpenFile db filePath mode flags = do
-  dbg $ "Opening " ++ filePath
+  dbg $ "OpenFile: " ++ filePath
   maybeEntity ← fileEntityFromPath db filePath
   if isJust maybeEntity
     then return (Right NonHandle)
@@ -89,7 +89,7 @@ tWriteFile ∷ DB
            → FileOffset
            → IO (Either Errno ByteCount)
 tWriteFile db filePath _ bytes offset = do
-  dbg $ "Write: " ++ filePath
+  dbg $ "WriteFile: " ++ filePath
 
   maybeEntity ← fileEntityFromPath db filePath
   case maybeEntity of
