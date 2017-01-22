@@ -16,5 +16,5 @@ import           Data.Monoid             ((<>))
 debugFile ∷ FilePath
 debugFile = "/Users/markwong-vanharen/Development/TagFS/debug.log"
 
-dbg ∷ ByteString → IO ()
-dbg msg = B.appendFile debugFile (msg <> "\n")
+dbg ∷ String → IO ()
+dbg msg = B.appendFile debugFile (B.pack msg <> "\n")

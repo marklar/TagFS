@@ -2,59 +2,56 @@
 
 module Tag where
 
-import           Database.HDBC
-import           Database.HDBC.Sqlite3
-
-import           DataStore.Find
-import           DataStore.Insert
-import           DataStore.Model
+import           DB.Find
+import           DB.Insert
+import           DB.Model
 
 
-multiTagFile ∷ Connection → FileName → [TagName] → IO ()
-multiTagFile conn fileName tagNames =
-  mapM_ (tagFile conn fileName) tagNames
+multiTagFile ∷ DB → FileName → [TagName] → IO ()
+multiTagFile db fileName tagNames =
+  mapM_ (tagFile db fileName) tagNames
 
 
-tagFile ∷ Connection → FileName → TagName → IO ()
-tagFile conn fileName tagName = do
+tagFile ∷ DB → FileName → TagName → IO ()
+tagFile db fileName tagName = do
   -- Find FileEntity. If ~∃, "<fileName>: No such file or directory"
-  maybeFileEntity ← fileFromName conn fileName
+  maybeFileEntity ← fileFromName db fileName
   case maybeFileEntity of
     Nothing →
       -- FIXME: Return error.
       return ()
     Just fileEntity → do
       -- Find or create TagEntity
-      maybeTagEntity ← tagFromName conn tagName
+      maybeTagEntity ← tagFromName db tagName
       case maybeTagEntity of
         Nothing → do
-          mkTag conn (Tag tagName)
-          createFileTag conn fileEntity tagName
+          mkTag db (Tag tagName)
+          createFileTag db fileEntity tagName
         Just tagEntity →
-          findOrCreateFileTag conn fileEntity tagEntity
+          findOrCreateFileTag db fileEntity tagEntity
 
 
 ------------------
 
 -- FIXME: What if FileTagEntity already exists?
-findOrCreateFileTag ∷ Connection
+findOrCreateFileTag ∷ DB
                     → Entity   -- ^ File
                     → Entity   -- ^ Tag
                     → IO ()
-findOrCreateFileTag conn (FileEntity fileId _) (TagEntity tagId _) =
-  mkFileTag conn fileId tagId
+findOrCreateFileTag db (FileEntity fileId _) (TagEntity tagId _) =
+  mkFileTag db fileId tagId
   
 
-createFileTag ∷ Connection
+createFileTag ∷ DB
               → Entity      -- ^ File
               → TagName
               → IO ()
-createFileTag conn (FileEntity fileId _) tagName = do
+createFileTag db (FileEntity fileId _) tagName = do
   -- It *should* exist here.
-  maybeTagEntity ← tagFromName conn tagName
+  maybeTagEntity ← tagFromName db tagName
   case maybeTagEntity of
     Nothing →
       -- FIXME: Should be error.
       return ()
     Just (TagEntity tagId (Tag name)) →
-      mkFileTag conn fileId tagId
+      mkFileTag db fileId tagId

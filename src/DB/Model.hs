@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DataStore.Model where
+module DB.Model where
 
 import           Data.ByteString
 import           Database.HDBC
@@ -9,6 +9,7 @@ import           Database.HDBC.Sqlite3
 import           Control.Monad.IO.Class  (liftIO)
 
 
+type DB = Connection
 type FileName = String
 type TagName = String
 type FileId = Integer

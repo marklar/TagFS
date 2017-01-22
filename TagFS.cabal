@@ -15,10 +15,10 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     DataStore.Model
-                     , DataStore.Create
-                     , DataStore.Find
-                     , DataStore.Insert
+  exposed-modules:     DB.Model
+                     , DB.Create
+                     , DB.Find
+                     , DB.Insert
                      , Debug
                      , Entry
                      , FuseOps

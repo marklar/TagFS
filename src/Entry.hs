@@ -3,45 +3,32 @@
 
 module Entry where
 
-import           Database.HDBC
-import           Database.HDBC.Sqlite3
-import           Data.ByteString         (ByteString)
-import qualified Data.ByteString.Char8   as B
-import           Data.Maybe
+import           Data.Maybe              (isJust)
 import           Control.Monad
-import           Data.Monoid             ((<>))
+import           System.Fuse             (getFuseContext)
 
-import           System.Fuse
-import           System.IO
-import           System.Posix.Files
-import           System.Posix.Types
-
-import           Debug                   (dbg)
-import           DataStore.Find
-import           DataStore.Model
-import           Parse
-import           Stat                    ( dirStat, fileStat
-                                         , tagGetFileSystemStats
-                                         )
+import           DB.Find                 (fileFromName, tagFromName)
+import           DB.Model
+import           Stat                    (dirStat, fileStat)
 import           Types
 
 
-findEntryByName ∷ Connection → String → IO (Maybe Entry)
-findEntryByName dbConn name = do
-  maybeFile ← findFileByName dbConn name
+findEntryByName ∷ DB → String → IO (Maybe Entry)
+findEntryByName db name = do
+  maybeFile ← findFileByName db name
   if isJust maybeFile
     then return maybeFile
-    else findTagByName dbConn name
+    else findTagByName db name
 
 
-findFileByName ∷ Connection → String → IO (Maybe Entry)
-findFileByName dbConn name =
-  fileFromName dbConn name >>= entityToEntry
+findFileByName ∷ DB → String → IO (Maybe Entry)
+findFileByName db name =
+  fileFromName db name >>= entityToEntry
 
 
-findTagByName ∷ Connection → String → IO (Maybe Entry)
-findTagByName dbConn name =
-  tagFromName dbConn name >>= entityToEntry
+findTagByName ∷ DB → String → IO (Maybe Entry)
+findTagByName db name =
+  tagFromName db name >>= entityToEntry
 
 
 entityToEntry ∷ Maybe Entity → IO (Maybe Entry)

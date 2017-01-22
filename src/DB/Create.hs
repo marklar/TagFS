@@ -1,17 +1,21 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DataStore.Create where
+module DB.Create where
 
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
 
-import           DataStore.Model
+import           DB.Model
 
 
-createDb ∷ String → IO ()
+connect ∷ FilePath → IO DB
+connect = connectSqlite3
+
+
+createDb ∷ FilePath → IO ()
 createDb dbName = do
-  conn <- connectSqlite3 dbName
+  conn <- connect dbName
 
   run conn ("CREATE TABLE tags " ++
             "(id INTEGER PRIMARY KEY," ++
@@ -41,3 +45,15 @@ createDb dbName = do
 
   commit conn
   disconnect conn
+
+
+{-
+dbStuff ∷ String → IO ()
+dbStuff dbFileName = do
+  createDb dbFileName
+  conn ← connectSqlite3 dbFileName
+  -- addSomeData conn
+  -- viewData conn
+  disconnect conn
+-}
+

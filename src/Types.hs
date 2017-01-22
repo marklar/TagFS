@@ -14,4 +14,3 @@ data NonHandle = NonHandle
 data Entry = FileEntry FileStat !ByteString
            | DirEntry  FileStat
   deriving Show
-

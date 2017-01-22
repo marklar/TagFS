@@ -3,12 +3,8 @@
 
 module FuseOps where
 
-import           Database.HDBC
-import           Database.HDBC.Sqlite3
 import           Data.ByteString         (ByteString)
 import qualified Data.ByteString.Char8   as B
-import           Data.Maybe
-import           Control.Monad
 import           Data.Monoid             ((<>))
 
 import           System.Fuse
@@ -17,8 +13,8 @@ import           System.Posix.Files
 import           System.Posix.Types
 
 import           Debug                   (dbg)
-import           DataStore.Find
-import           DataStore.Model
+import           DB.Find
+import           DB.Model
 import           Entry
 import           Parse
 import           Stat                    ( dirStat, fileStat
@@ -27,13 +23,13 @@ import           Stat                    ( dirStat, fileStat
 import           Types
 
 
--- Question: store the file contents in the DB, or use the actual FS?
+-- Question: db the file contents in the DB, or use the actual FS?
 -- If in the actual FS, how?
 
 --------------------
 
-runFuse ∷ Connection → IO ()
-runFuse dbConn = do
+runFuse ∷ DB → IO ()
+runFuse db = do
   dbg "getting FUSE context"
   ctx ← getFuseContext
 
@@ -44,11 +40,11 @@ runFuse dbConn = do
   where
     fuseOps ∷ FuseOperations NonHandle
     fuseOps = defaultFuseOps
-              { fuseGetFileStat        = tagGetFileStat dbConn
+              { fuseGetFileStat        = tagGetFileStat db
               -- fuseReadSymbolicLink
-              , fuseCreateDevice       = tagCreateDevice dbConn
-              , fuseCreateDirectory    = tagCreateDir dbConn
-              , fuseRemoveLink         = tagRemoveLink dbConn
+              , fuseCreateDevice       = tagCreateDevice db
+              , fuseCreateDirectory    = tagCreateDir db
+              , fuseRemoveLink         = tagRemoveLink db
               -- fuseRemoveDirectory
               -- fuseCreateSymbolicLink
               -- fuseRename
@@ -56,16 +52,16 @@ runFuse dbConn = do
               -- fuseSetFileMode
               -- fuseSetOwnerAndGroup
               -- fuseSetFileSize
-              , fuseSetFileTimes       = tagSetFileTimes dbConn
+              , fuseSetFileTimes       = tagSetFileTimes db
               , fuseOpen               = tagOpen
-              , fuseRead               = tagRead dbConn
-              , fuseWrite              = tagWrite dbConn
+              , fuseRead               = tagRead db
+              , fuseWrite              = tagWrite db
               , fuseGetFileSystemStats = tagGetFileSystemStats
               -- fuseFlush
               , fuseRelease            = \_ _ → return ()
               -- fuseSynchronizeFile
-              , fuseOpenDirectory      = tagOpenDir dbConn
-              , fuseReadDirectory      = tagReadDir dbConn
+              , fuseOpenDirectory      = tagOpenDir db
+              , fuseReadDirectory      = tagReadDir db
               -- fuseReleaseDirectory
               -- fuseSynchronizeDirectory
               , fuseAccess             = tagAccess
@@ -87,9 +83,9 @@ filesystem.
    Should work for either Files or Dirs.
    (Perhaps 'FileStat' should be renamed to 'NodeStat'?)
 -}
-tagGetFileStat ∷ Connection → FilePath → IO (Either Errno FileStat)
-tagGetFileStat dbConn filePath = do
-  dbg $ "GetFileStat: " <> B.pack filePath
+tagGetFileStat ∷ DB → FilePath → IO (Either Errno FileStat)
+tagGetFileStat db filePath = do
+  dbg $ "GetFileStat: " ++ filePath
 
   case filePath of
 
@@ -105,14 +101,14 @@ tagGetFileStat dbConn filePath = do
     -- Look up just by the fileName
     _ → do
       let (fileName:restOfPath) = pathParts filePath
-      dbg $ "  finding file of name: " <> B.pack fileName
+      dbg $ "  finding file of name: " ++ fileName
       
-      maybeEntry ← findEntryByName dbConn fileName
+      maybeEntry ← findEntryByName db fileName
       
       case maybeEntry of
 
         Nothing → do
-          dbg $ "  Failed to find " <> B.pack fileName
+          dbg $ "  Failed to find " ++ fileName
           return (Left eNOENT)
 
         Just (FileEntry stat _) → do
@@ -149,7 +145,7 @@ tagOpen ∷ FilePath
         → IO (Either Errno NonHandle)
 tagOpen filePath mode flags = do
   let (_:fileName) = filePath
-  dbg $ "Opening " <> B.pack fileName
+  dbg $ "Opening " ++ fileName
   return (Right NonHandle)
 
 
@@ -168,25 +164,25 @@ of the file. Required for any sensible filesystem.
 {- | In case of success, return 'bc' bytes of the ByteString contents of
    a file.
 -}
-tagRead ∷ Connection   -- db connection
+tagRead ∷ DB   -- db connection
         → FilePath
         → NonHandle
         → ByteCount    -- System.Posix.Types
         → FileOffset   -- System.Posix.Types
         → IO (Either Errno ByteString)
-tagRead dbConn filePath handle bc offset = do
+tagRead db filePath handle bc offset = do
   let (_:fileName) = filePath
-  dbg $ "Reading: " <> B.pack fileName
+  dbg $ "Reading: " ++ fileName
 
-  maybeEntry ← findFileByName dbConn fileName
+  maybeEntry ← findFileByName db fileName
   case maybeEntry of
 
     Just (FileEntry fStat contents) → do
-      dbg $ "  Read: " <> B.pack fileName <> ", got: " <> contents
+      dbg $ "  Read: " ++ fileName ++ ", got: " ++ B.unpack contents
       return (Right contents)
 
     Nothing → do
-      dbg $ "  Read: failed on " <> B.pack fileName
+      dbg $ "  Read: failed on " ++ fileName
       return (Left eNOENT)
 
 
@@ -212,24 +208,24 @@ exist.
 
 {- | Entire contents of dir.
 -}
-tagReadDir :: Connection → FilePath
+tagReadDir :: DB → FilePath
            → IO (Either Errno [(FilePath, FileStat)])
-tagReadDir dbConn filePath = do
-  dbg $ "ReadDir: " <> B.pack filePath
+tagReadDir db filePath = do
+  dbg $ "ReadDir: " ++ filePath
 
   ctx ← getFuseContext
   return $ Right [ (".",  dirStat ctx)
                  , ("..", dirStat ctx)
                  ]
-  -- filesAndStats ← getFilesAndStats dbConn filePath
+  -- filesAndStats ← getFilesAndStats db filePath
   -- return $ case filesAndStats of
   --            [] → Left eNOENT
   --            _  → Right filesAndStats
 
 
 -- TODO
-getFilesAndStats ∷ Connection → FilePath → IO [(FilePath, FileStat)]
-getFilesAndStats dbConn filePath = undefined
+getFilesAndStats ∷ DB → FilePath → IO [(FilePath, FileStat)]
+getFilesAndStats db filePath = undefined
 
 
 --------------------
@@ -237,14 +233,14 @@ getFilesAndStats dbConn filePath = undefined
 {- | If asked to create a RegularFile, create an empty one w/ provided
    mode & return eOK. If some other type of device: eNOENT.
 -}
-tagCreateDevice ∷ Connection
+tagCreateDevice ∷ DB
                 → FilePath    -- FilePath ~ String
                 → EntryType   -- FUSE: The Unix type of a node in the FS (RegularFile | Directory | …)
                 → FileMode    -- System.Posix.Types
                 → DeviceID    -- System.Posix.Types
                 → IO Errno    -- Foreign.C.Error
-tagCreateDevice dbConn filePath entryType mode deviceId = do
-  dbg $ "creating device with path: " <> B.pack filePath
+tagCreateDevice db filePath entryType mode deviceId = do
+  dbg $ "creating device with path: " ++ filePath
   ctx ← getFuseContext
 
   case entryType of
@@ -252,17 +248,17 @@ tagCreateDevice dbConn filePath entryType mode deviceId = do
     RegularFile → do
       let (fileName:restOfPath) = pathParts filePath
       let newStat = (fileStat ctx) { statFileMode = mode }    -- record update syntax
-      createNewFile dbConn fileName "" newStat
+      createNewFile db fileName "" newStat
       return eOK
 
     _ → do
-      dbg $ "Failed to create unknown device type with path: " <> B.pack filePath
+      dbg $ "Failed to create unknown device type with path: " ++ filePath
       return eNOENT
 
 
 -- TODO
-createNewFile ∷ Connection → FileName → ByteString → FileStat → IO ()
-createNewFile dbConn fileName contents fStat = undefined
+createNewFile ∷ DB → FileName → ByteString → FileStat → IO ()
+createNewFile db fileName contents fStat = undefined
 
 
 --------------------
@@ -270,20 +266,20 @@ createNewFile dbConn fileName contents fStat = undefined
 -- TODO
 {- | What's in FileName? So we know how to use it to create tag(s).
 -}
-createNewTags ∷ Connection → FileName → FileStat → IO ()
-createNewTags dbConn fileName fStat = undefined
+createNewTags ∷ DB → FileName → FileStat → IO ()
+createNewTags db fileName fStat = undefined
 
 
 {- | Create new tags (as necessary) for dirs in path.
 -}
-tagCreateDir ∷ Connection → FilePath → FileMode → IO Errno
-tagCreateDir dbConn filePath mode = do
-  dbg $ "creating directory with path: " <> B.pack filePath
+tagCreateDir ∷ DB → FilePath → FileMode → IO Errno
+tagCreateDir db filePath mode = do
+  dbg $ "creating directory with path: " ++ filePath
 
   ctx ← getFuseContext
   let (_:fileName) = filePath
   let newStat = (dirStat ctx) { statFileMode = mode }
-  createNewTags dbConn fileName newStat
+  createNewTags db fileName newStat
   return eOK
 
 
@@ -292,15 +288,15 @@ tagCreateDir dbConn filePath mode = do
 
 {- | If filePath maps to a dir: eOK. Else: eNOENT.
 -}
-tagOpenDir ∷ Connection → FilePath → IO Errno
-tagOpenDir dbConn filePath = do
-  dbg $ "Opening dir " <> B.pack filePath
+tagOpenDir ∷ DB → FilePath → IO Errno
+tagOpenDir db filePath = do
+  dbg $ "Opening dir " ++ filePath
   if filePath == "/"
     then return eOK
     else do let (_:fileName) = filePath
             -- FIXME: Logic is too simple.
             -- Check whether any files have this combo of tags.
-            ex ← tagExists dbConn fileName
+            ex ← tagExists db fileName
             if ex
               then return eOK
               else return eNOENT
@@ -309,30 +305,30 @@ tagOpenDir dbConn filePath = do
 --------------------
 
 
-tagWrite ∷ Connection
+tagWrite ∷ DB
          → FilePath
          → NonHandle
          → ByteString
          → FileOffset
          → IO (Either Errno ByteCount)
-tagWrite dbConn filePath _ bytes offset = do
-  dbg $ "Write: " <> B.pack filePath
+tagWrite db filePath _ bytes offset = do
+  dbg $ "Write: " ++ filePath
 
   let (_:fileName) = filePath
 
-  maybeEntity ← findFileByName dbConn fileName
+  maybeEntity ← findFileByName db fileName
   case maybeEntity of
     
     Nothing → do
-      dbg $ "  didn't find file (" <> B.pack fileName <> ")"
+      dbg $ "  didn't find file (" ++ fileName ++ ")"
       return (Left eNOENT)
 
     Just (DirEntry _) → do
-      dbg $ "  found dir (" <> B.pack fileName <> ")"
+      dbg $ "  found dir (" ++ fileName ++ ")"
       return (Left eNOENT)
       
     Just (FileEntry fStat contents) → do
-      dbg $ "  found: -- " <> B.pack fileName
+      dbg $ "  found: -- " ++ fileName
       writeFile fStat fileName contents
 
   where
@@ -346,13 +342,13 @@ tagWrite dbConn filePath _ bytes offset = do
 --------------------
 
 
-tagSetFileTimes ∷ Connection → FilePath → EpochTime → EpochTime → IO Errno
-tagSetFileTimes dbConn filePath t1 t2 = return eOK
+tagSetFileTimes ∷ DB → FilePath → EpochTime → EpochTime → IO Errno
+tagSetFileTimes db filePath t1 t2 = return eOK
 
 
 tagAccess ∷ FilePath → Int → IO Errno
 tagAccess filePath _ = do
-  dbg $ "Access: " <> B.pack filePath
+  dbg $ "Access: " ++ filePath
   return eOK
 
 
@@ -366,21 +362,21 @@ tagAccess filePath _ = do
    deletes the data when the last hard link is removed. See unlink(2)
    for details.
 -}
-tagRemoveLink ∷ Connection → FilePath → IO Errno
-tagRemoveLink dbConn filePath = do
-  dbg $ "RemoveLink: " <> B.pack filePath
+tagRemoveLink ∷ DB → FilePath → IO Errno
+tagRemoveLink db filePath = do
+  dbg $ "RemoveLink: " ++ filePath
   let (_:fileName) = filePath
   
-  maybeEntry ← findEntryByName dbConn fileName
+  maybeEntry ← findEntryByName db fileName
   case maybeEntry of
 
     Nothing →
       return eNOENT
 
     Just _ → do
-      rmEntryByName dbConn fileName
+      rmEntryByName db fileName
       return eOK
 
 
-rmEntryByName ∷ Connection → FileName → IO ()
-rmEntryByName dbConn fileName = undefined
+rmEntryByName ∷ DB → FileName → IO ()
+rmEntryByName db fileName = undefined

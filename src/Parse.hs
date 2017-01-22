@@ -6,7 +6,7 @@ module Parse where
 import           Data.List.Split         (splitOn)
 
 -- FIXME
-import           DataStore.Model         (TagName, FileName)
+import           DB.Model         (TagName, FileName)
 
 
 {- | Sometimes the path is for a dir, other times for a file.

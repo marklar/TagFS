@@ -1,13 +1,13 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DataStore.Find where
+module DB.Find where
 
 import           Control.Monad            (liftM)
 import           Data.Maybe               (isJust)
 import           Database.HDBC            (SqlValue, quickQuery', fromSql, toSql)
 import           Database.HDBC.Sqlite3    (Connection)
 
-import           DataStore.Model
+import           DB.Model
 
 
 fileNamesFromTagId ∷ Connection → TagId → IO [FileName]
