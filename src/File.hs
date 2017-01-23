@@ -121,11 +121,8 @@ tWriteFile db filePath _ bytes offset = do
 fileEntityFromPath ∷ DB → FilePath → IO (Maybe Entity)
 fileEntityFromPath db filePath = do
   let (tagNames, maybeFileName) = parseFilePath filePath
-  -- dbg $ "  tagNames: " ++ show tagNames
-  -- dbg $ "  maybeFileName: " ++ show maybeFileName
   case maybeFileName of
     Nothing →
       return Nothing
     Just fileName → do
-      -- dbg "  attempting 'from tags and name'"
       fileEntityFromTagsAndName db tagNames fileName

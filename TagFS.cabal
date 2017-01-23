@@ -20,6 +20,7 @@ library
                      , DB.Find
                      , DB.Insert
                      , Debug
+                     , Device
                      , Dir
                      , File
                      , FuseOps

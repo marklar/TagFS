@@ -14,14 +14,13 @@ import           System.Posix.Files
 import           System.Posix.Types
 
 import           Debug                   (dbg)
+import           Device                  (tCreateDevice)
 import           DB.Model
 import           DB.Find                 -- (filesFromTags)
 import           DB.Insert
 import           Dir                     (createDir, openDir, readDir)
 import           Node                    (nodeNamed)
-import           File                    ( tOpenFile
-                                         , tReadFile
-                                         , tWriteFile
+import           File                    ( tOpenFile, tReadFile, tWriteFile
                                          , fileEntityFromPath  -- TODO: mv to utils
                                          )
 import           Parse
@@ -77,16 +76,6 @@ runFuse db = do
       }
 
 
-{- | getattr(const char* path, struct stat* stbuf)
-
-Return file attributes. The "stat" structure is described in detail in
-the stat(2) manual page. For the given pathname, this should fill in
-the elements of the "stat" structure. If a field is meaningless or
-semi-meaningless (e.g., st_ino) then it should be set to 0 or given a
-"reasonable" value. This call is pretty much required for a usable
-filesystem.
--}
-
 {- | getattr: info about inode (number, owner, last access)
    Should work for either Files or Dirs.
    (Perhaps 'FileStat' should be renamed to 'NodeStat'?)
@@ -94,83 +83,33 @@ filesystem.
 getFileStat ∷ DB → FilePath → IO (Either Errno FileStat)
 getFileStat db filePath = do
   dbg $ "GetFileStat: " ++ filePath
+  ctx ← getFuseContext
+
   case filePath of
 
     -- What the hell is this?
     "/._." →
       return $ Left eNOENT
 
-    -- Root dir: Special case, as it's the absence of any tags.
+    -- Root dir: show all files & tags.
     "/" → do
-      ctx ← getFuseContext
       return $ Right (dirStat ctx)
 
+    -- File or Dir?
     _ → do
-      dbg "  Might be Dir, might be File. Trying first as File."
       maybeFileEntity ← fileEntityFromPath db filePath
       case maybeFileEntity of
 
-        Just (FileEntity _ _) → do
-          -- dbg "  Found file"
-          ctx ← getFuseContext
+        -- TODO: store stat info w/ file & return it here.
+        Just (FileEntity _ _) →
           return $ Right (fileStat ctx)
 
         Nothing → do
           -- error "need a function that recursively looks up stats"
-          let tagNames = parseDirPath filePath
-          dbg $ "  Not a File. Trying as Dir w/ tagNames: " ++ show tagNames
-          fileEntities ← filesFromTags db tagNames
-          dbg $ "  filesFromTags: " ++ show fileEntities
+          fileEntities ← filesFromTags db (parseDirPath filePath)
           if null fileEntities
             then return $ Left eNOENT
-            else do dbg "  Found dir"
-                    ctx ← getFuseContext
-                    return $ Right (dirStat ctx)
-
-
---------------------
-
-
-{- | If asked to create a RegularFile, create an empty one w/ provided
-   mode & return eOK. If some other type of device: eNOENT.
--}
-tCreateDevice ∷ DB
-              → FilePath   -- FilePath ~ String
-              → EntryType  -- FUSE: The Unix node type in FS (RegularFile | Directory | …)
-              → FileMode   -- System.Posix.Types
-              → DeviceID   -- System.Posix.Types
-              → IO Errno   -- Foreign.C.Error
-tCreateDevice db filePath entryType mode deviceId = do
-  dbg $ "CreateDevice, path: " ++ filePath ++ ", entryType: " ++ show entryType
-  ctx ← getFuseContext
-
-  case entryType of
-
-    RegularFile → do
-      let newStat = (fileStat ctx) { statFileMode = mode }    -- record update syntax
-      let (tagNames, maybeFileName) = parseFilePath filePath
-
-      case maybeFileName of
-        Nothing →
-          return eNOENT
-
-        Just n → do
-          mkFile db (File n B.empty)
-          maybeFileEntity ← fileEntityNamed db n
-
-          case maybeFileEntity of
-            Nothing →
-              return eNOENT  -- Should never happen!
-
-            Just (FileEntity fileId (File _ _)) → do
-              maybeTagEntities ← mapM (tagEntityNamed db) tagNames
-              let tagIds = map tagId (catMaybes maybeTagEntities)
-              mapM_ (mkFileTag db fileId) tagIds
-              return eOK
-
-    _ → do
-      dbg $ "Failed to create unknown device type with path: " ++ filePath
-      return eNOENT
+            else return $ Right (dirStat ctx)
 
 
 --------------------
