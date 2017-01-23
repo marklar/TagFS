@@ -8,9 +8,7 @@ module Dir
   , removeDir
   ) where
 
-import           Control.Monad
 import           System.Fuse
-import           System.Posix.Files
 import           System.Posix.Types
 
 import           DB.Find
@@ -38,8 +36,7 @@ removeDir db filePath = do
   -- Split filePath into [Tag].
   let tagNames = parseDirPath filePath
   -- Find all files (if any) with that (complete) tagSet.
-  -- filesFromTags ∷ Connection → [TagName] → IO [Entity]
-  fileEntities ← filesFromTags db tagNames
+  fileEntities ← fileEntitiesFromTags db tagNames
   if null fileEntities
     then return eNOENT
     else do let tagName = last tagNames
@@ -64,34 +61,32 @@ Possible error: eNOENT if the path doesn't exist.
 readDir ∷ DB → FilePath → IO (Either Errno [(FilePath, FileStat)])
 readDir db filePath = do
   dbg $ "ReadDir: " ++ filePath
+
   ctx ← getFuseContext
+  let baseDirs = [ (".",  dirStat ctx)
+                 , ("..", dirStat ctx)
+                 ]
 
   if filePath == "/"
-    -- TODO: include ALL files here!
-    then return $ Right $ [ (".",  dirStat ctx)
-                          , ("..", dirStat ctx)
-                          ]
-    else do let tagNames = parseDirPath filePath
-            -- Find all files (if any) with that (complete) tagSet.
-            fileEntities ← filesFromTags db tagNames
+    -- Include ALL TAGS and ALL FILES.
+    then do fileEntities ← allFileEntities db
+            r ← namesWithStats db fileEntities
+            return $ Right (baseDirs ++ r)
+
+    -- Find all files (if any) with that (complete) tagSet.
+    else do fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
             dbg $ "  num files: " ++ (show $ length fileEntities)
             if null fileEntities
               then return $ Left eNOENT
-              else return $ Right $ [ (".",  dirStat ctx)
-                                    , ("..", dirStat ctx)
-                                    ] ++ (map (\(FileEntity _ (File name _)) →
-                                                  (name, fileStat ctx))
-                                           fileEntities)
-  -- filesAndStats ← getFilesAndStats db filePath
-  -- return $ case filesAndStats of
-  --            [] → Left eNOENT
-  --            _  → Right filesAndStats
+              else do r ← namesWithStats db fileEntities
+                      return $ Right (baseDirs ++ r)
 
 
--- TODO
-getFilesAndStats ∷ DB → FilePath → IO [(FilePath, FileStat)]
-getFilesAndStats db filePath = undefined
-
+namesWithStats ∷ DB → [Entity] → IO [(FileName, FileStat)]
+namesWithStats db fileEntities = do
+  ctx ← getFuseContext
+  return $ flip map fileEntities (\(FileEntity _ (File name _)) →
+                                    (name, fileStat ctx))
 
 
 -- TODO
@@ -125,7 +120,7 @@ openDir db filePath = do
   if filePath == "/"
     then return eOK
     else do let tagNames = parseDirPath filePath
-            fileEntities ← filesFromTags db tagNames
+            fileEntities ← fileEntitiesFromTags db tagNames
             if null fileEntities
               then return eNOENT
               else do dbg "  Found dir"

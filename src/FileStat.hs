@@ -7,7 +7,7 @@ import           System.Fuse
 
 import           Debug                   (dbg)
 import           DB.Model
-import           DB.Find                 (filesFromTags)
+import           DB.Find                 (fileEntitiesFromTags)
 import           File                    (fileEntityFromPath)  -- TODO: mv to utils
 import           Parse                   (parseDirPath)
 import           Stat                    (dirStat, fileStat)
@@ -43,7 +43,7 @@ getFileStat db filePath = do
 
         Nothing → do
           -- error "need a function that recursively looks up stats"
-          fileEntities ← filesFromTags db (parseDirPath filePath)
+          fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
           if null fileEntities
             then return $ Left eNOENT
             else return $ Right (dirStat ctx)

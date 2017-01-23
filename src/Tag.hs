@@ -1,5 +1,7 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
+{-| Currently unused.
+-}
 module Tag where
 
 import           DB.Find

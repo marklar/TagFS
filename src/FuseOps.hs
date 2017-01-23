@@ -40,7 +40,7 @@ runFuse db = do
       , fuseRead               = File.tReadFile  db
       , fuseWrite              = File.tWriteFile db
 
-      -- Either
+      -- Any kind of entry (node)
       , fuseGetFileStat        = getFileStat   db
       -- , fuseAccess             = tAccess
       , fuseCreateDevice       = tCreateDevice db
