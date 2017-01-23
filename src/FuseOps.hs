@@ -5,6 +5,7 @@ module FuseOps where
 
 import           Data.ByteString         (ByteString)
 import qualified Data.ByteString.Char8   as B
+import           Data.Maybe              (catMaybes)
 import           Data.Monoid             ((<>))
 
 import           System.Fuse
@@ -15,6 +16,7 @@ import           System.Posix.Types
 import           Debug                   (dbg)
 import           DB.Model
 import           DB.Find                 -- (filesFromTags)
+import           DB.Insert
 import           Dir                     (createDir, openDir, readDir)
 import           Node                    (nodeNamed)
 import           File                    ( tOpenFile
@@ -139,25 +141,36 @@ tCreateDevice ∷ DB
               → DeviceID   -- System.Posix.Types
               → IO Errno   -- Foreign.C.Error
 tCreateDevice db filePath entryType mode deviceId = do
-  dbg $ "creating device with path: " ++ filePath
+  dbg $ "CreateDevice, path: " ++ filePath ++ ", entryType: " ++ show entryType
   ctx ← getFuseContext
 
   case entryType of
 
     RegularFile → do
-      let (fileName:restOfPath) = pathParts filePath
       let newStat = (fileStat ctx) { statFileMode = mode }    -- record update syntax
-      createNewFile db fileName "" newStat
-      return eOK
+      let (tagNames, maybeFileName) = parseFilePath filePath
+
+      case maybeFileName of
+        Nothing →
+          return eNOENT
+
+        Just n → do
+          mkFile db (File n B.empty)
+          maybeFileEntity ← fileEntityNamed db n
+
+          case maybeFileEntity of
+            Nothing →
+              return eNOENT  -- Should never happen!
+
+            Just (FileEntity fileId (File _ _)) → do
+              maybeTagEntities ← mapM (tagEntityNamed db) tagNames
+              let tagIds = map tagId (catMaybes maybeTagEntities)
+              mapM_ (mkFileTag db fileId) tagIds
+              return eOK
 
     _ → do
       dbg $ "Failed to create unknown device type with path: " ++ filePath
       return eNOENT
-
-
--- TODO
-createNewFile ∷ DB → FileName → ByteString → FileStat → IO ()
-createNewFile db fileName contents fStat = undefined
 
 
 --------------------

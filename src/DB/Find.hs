@@ -16,6 +16,14 @@ import           Debug
 import           DB.Model
 
 
+filesFromTags ∷ Connection → [TagName] → IO [Entity]
+filesFromTags conn tagNames = do
+  fileIdLists ← mapM (fileIdsForTag conn) tagNames
+  let fileIds = foldr1 (\ids acc → intersect ids acc) fileIdLists
+  maybeEntities ← mapM (fileEntityById conn) fileIds
+  return $ catMaybes maybeEntities
+
+
 fileIdsForTag ∷ Connection → TagName → IO [FileId]
 fileIdsForTag conn tagName = do
   let sql = "SELECT      files_tags.file_id " ++
@@ -27,12 +35,7 @@ fileIdsForTag conn tagName = do
   return $ map fromSql (concat ids)
 
 
-filesFromTags ∷ Connection → [TagName] → IO [Entity]
-filesFromTags conn tagNames = do
-  fileIdLists ← mapM (fileIdsForTag conn) tagNames
-  let fileIds = foldr1 (\ids acc → intersect ids acc) fileIdLists
-  maybeEntities ← mapM (fileEntityById conn) fileIds
-  return $ catMaybes maybeEntities      
+-----------------------
 
 
 fileEntityById ∷ Connection → FileId → IO (Maybe Entity)
@@ -56,9 +59,8 @@ fileEntityFromTagsAndName ∷ Connection
 fileEntityFromTagsAndName conn tagNames name = do
   if name == "._."
     then return Nothing
-    else do dbg $ "Find.fileEntityFromTagsAndName, tagNames: " ++ show tagNames
-            allTagNames ← tagsForFileName conn name
-            dbg $ "  allTagNames: " ++ show allTagNames
+    else do allTagNames ← tagsForFileName conn name
+            dbg $ "  Find.fileEntityFromTagsAndName, tagNames: " ++ show tagNames
             if all (\n → elem n allTagNames) tagNames
               then fileEntityNamed conn name
               else return Nothing
@@ -149,14 +151,11 @@ findRowByVal ∷ Connection
              → SqlValue
              → IO (Maybe [SqlValue])
 findRowByVal conn tableName colName sqlVal = do
-  dbg $ ">> Find.findRowByVal: " ++ fromSql sqlVal
   let sql = "SELECT * " ++
             "FROM   " ++ tableName ++ " " ++
             "WHERE  " ++ tableName ++ "." ++ colName ++ " = ? " ++
             "LIMIT  1"
-  dbg $ ">> sql: " ++ sql
   r ← queryWithClone conn sql [sqlVal]
-  dbg ">> after query"
   case r of
     [] → do
       return Nothing

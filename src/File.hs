@@ -44,8 +44,10 @@ tOpenFile db filePath mode flags = do
   dbg $ "OpenFile: " ++ filePath
   maybeEntity ← fileEntityFromPath db filePath
   if isJust maybeEntity
-    then return (Right NonHandle)
-    else return $ Left eNOENT
+    then do dbg "  found"
+            return $ Right NonHandle
+    else do dbg "  not found"
+            return $ Left eNOENT
 
 
 ------------------------
