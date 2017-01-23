@@ -29,58 +29,51 @@ import           Stat                    ( dirStat, fileStat
 import           Types
 
 
--- Question: db the file contents in the DB, or use the actual FS?
--- If in the actual FS, how?
-
---------------------
 
 runFuse ∷ DB → IO ()
 runFuse db = do
-  dbg "getting FUSE context"
   ctx ← getFuseContext
-
-  dbg "before fuseMain"
   fuseMain fuseOps defaultExceptionHandler
-  dbg "after fuseMain"
-
   where
     fuseOps ∷ FuseOperations NonHandle
-    fuseOps = defaultFuseOps
-              { fuseGetFileSystemStats = Stat.getFileSystemStats
+    fuseOps =
+      defaultFuseOps
+      { fuseGetFileSystemStats = Stat.getFileSystemStats
 
-              -- Dir
-              , fuseCreateDirectory    = Dir.createDir db
-              , fuseOpenDirectory      = Dir.openDir db
-              , fuseReadDirectory      = Dir.readDir db
-              -- fuseRemoveDirectory
+      -- Dir
+      , fuseCreateDirectory    = Dir.createDir db
+      , fuseOpenDirectory      = Dir.openDir   db
+      , fuseReadDirectory      = Dir.readDir   db
+      -- fuseRemoveDirectory
 
-              -- File
-              , fuseOpen               = File.tOpenFile db
-              , fuseRead               = File.tReadFile db
-              , fuseWrite              = File.tWriteFile db
+      -- File
+      , fuseOpen               = File.tOpenFile  db
+      , fuseRead               = File.tReadFile  db
+      , fuseWrite              = File.tWriteFile db
 
-              -- Either
-              , fuseGetFileStat        = getFileStat db
-              -- , fuseAccess             = tAccess
-              , fuseCreateDevice       = tCreateDevice db
-              , fuseRemoveLink         = tRemoveLink db
-              , fuseSetFileTimes       = tSetFileTimes db
+      -- Either
+      , fuseGetFileStat        = getFileStat   db
+      -- , fuseAccess             = tAccess
+      , fuseCreateDevice       = tCreateDevice db
+      , fuseRemoveLink         = tRemoveLink   db
+      , fuseSetFileTimes       = tSetFileTimes db
 
-              -- fuseReadSymbolicLink
-              -- fuseCreateSymbolicLink
-              -- fuseRename
-              -- fuseCreateLink
-              -- fuseSetFileMode
-              -- fuseSetOwnerAndGroup
-              -- fuseSetFileSize
-              -- fuseFlush
-              , fuseRelease            = \_ _ → return ()
-              -- fuseSynchronizeFile
-              -- fuseReleaseDirectory
-              -- fuseSynchronizeDirectory
-              -- fuseInit
-              -- fuseDestroy
-              }
+      -- fuseReadSymbolicLink
+      -- fuseCreateSymbolicLink
+      -- fuseRename
+      -- fuseCreateLink
+      -- fuseSetFileMode
+      -- fuseSetOwnerAndGroup
+      -- fuseSetFileSize
+      -- fuseFlush
+      , fuseRelease            = \_ _ → return ()
+      -- fuseSynchronizeFile
+      -- fuseReleaseDirectory
+      -- fuseSynchronizeDirectory
+      -- fuseInit
+      -- fuseDestroy
+      }
+
 
 {- | getattr(const char* path, struct stat* stbuf)
 
@@ -99,41 +92,33 @@ filesystem.
 getFileStat ∷ DB → FilePath → IO (Either Errno FileStat)
 getFileStat db filePath = do
   dbg $ "GetFileStat: " ++ filePath
-
-  -- foo ← findRowByName db "files" "football.txt"
-  -- dbg $ "foo: " ++ show foo
-
   case filePath of
+
+    -- What the hell is this?
     "/._." →
       return $ Left eNOENT
 
+    -- Root dir: Special case, as it's the absence of any tags.
     "/" → do
-      -- Root dir: Special case, as it's the absence of any tags.
-      -- dbg "  for '/'"
       ctx ← getFuseContext
       return $ Right (dirStat ctx)
 
     _ → do
-      dbg "  Not '/'. First trying as File."
-      -- FilePath might be *either*:
-      --   - just a directory (e.g. "sports/packers")
-      --   - a file (e.g. "sports/packers/football.txt"
+      dbg "  Might be Dir, might be File. Trying first as File."
       maybeFileEntity ← fileEntityFromPath db filePath
-      dbg "  After fileEntityFromPath"
-
       case maybeFileEntity of
 
         Just (FileEntity _ _) → do
-          dbg "  Found file"
+          -- dbg "  Found file"
           ctx ← getFuseContext
           return $ Right (fileStat ctx)
 
         Nothing → do
           -- error "need a function that recursively looks up stats"
           let tagNames = parseDirPath filePath
-          dbg $ "  Trying as dir w/ tagNames: " ++ show tagNames
+          dbg $ "  Not a File. Trying as Dir w/ tagNames: " ++ show tagNames
           fileEntities ← filesFromTags db tagNames
-          dbg $ "  after filesFromTags: " ++ show fileEntities
+          dbg $ "  filesFromTags: " ++ show fileEntities
           if null fileEntities
             then return $ Left eNOENT
             else do dbg "  Found dir"
@@ -142,6 +127,7 @@ getFileStat db filePath = do
 
 
 --------------------
+
 
 {- | If asked to create a RegularFile, create an empty one w/ provided
    mode & return eOK. If some other type of device: eNOENT.

@@ -2,19 +2,13 @@
 
 module DB.Create where
 
-import           Database.HDBC           (run, commit, disconnect)
-import           Database.HDBC.Sqlite3   (connectSqlite3)
-
+import           Database.HDBC           (run, commit)
 import           DB.Model
-
-
-connect ∷ FilePath → IO DB
-connect = connectSqlite3
 
 
 createDb ∷ FilePath → IO ()
 createDb dbName = do
-  conn <- connect dbName
+  conn ← connect dbName
 
   run conn ("CREATE TABLE tags " ++
             "(id INTEGER PRIMARY KEY," ++

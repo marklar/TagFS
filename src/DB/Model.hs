@@ -15,10 +15,12 @@ type TagName = String
 type FileId = Integer
 type TagId = Integer
 
+
 data File = File { fileName ∷ FileName
                  , fileContents ∷ ByteString
                  }
             deriving (Show)
+
 
 data Tag = Tag TagName
          deriving (Show)
@@ -41,3 +43,34 @@ data FileTag = FileTag { fId ∷ FileId
              deriving (Show)
 
 
+connect ∷ FilePath → IO DB
+connect = connectSqlite3
+
+
+clone ∷ DB → IO DB
+clone = Database.HDBC.clone
+
+
+disconnect ∷ DB → IO ()
+disconnect = Database.HDBC.disconnect
+
+
+withClone ∷ DB → (DB → IO α) → IO α
+withClone db f = do
+  db' ← DB.Model.clone db
+  r ← f db'
+  DB.Model.disconnect db'
+  return r
+
+
+execWithClone ∷ DB → String → [SqlValue] → IO ()
+execWithClone db sql args =
+  withClone db (\c → do
+                   stmt ← prepare c sql
+                   execute stmt args
+                   commit c)
+
+
+queryWithClone ∷ DB → String → [SqlValue] → IO [[SqlValue]]
+queryWithClone db sql args =
+  withClone db (\c → quickQuery' c sql args)

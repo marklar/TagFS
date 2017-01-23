@@ -9,10 +9,7 @@ import           Control.Monad            (liftM)
 import           Data.Maybe               (isJust, catMaybes)
 import           Data.List                (intercalate, intersect)
 import           Database.HDBC            ( SqlValue, quickQuery'
-                                          , fromSql, toSql
-                                          , prepare, run, execute
-                                          , catchSql
-                                          )
+                                          , fromSql, toSql, catchSql )
 import           Database.HDBC.Sqlite3    (Connection)
 
 import           Debug
@@ -21,40 +18,19 @@ import           DB.Model
 
 fileIdsForTag ∷ Connection → TagName → IO [FileId]
 fileIdsForTag conn tagName = do
-  dbg $ "!!! query: " ++ tagName
-
-  tagIds ←
-    catchSql (quickQuery' conn
-               "SELECT tags.id FROM tags WHERE tags.name = ?"
-               [toSql tagName]) (\e → do
-                                    dbg $ "catch: " ++ show e
-                                    return [])
-    
-  dbg $ "!!! after tagIds query: " ++ show tagIds
-  
-  ids ← quickQuery' conn
-        ( "SELECT      files_tags.file_id " ++
-          "FROM        files_tags " ++
-          "INNER JOIN  tags " ++
-          "ON          tags.name LIKE ? " ++
-          "AND         files_tags.tag_id = tags.id" )
-        [toSql tagName]
-  dbg $ "!!! ids: " ++ show ids
+  let sql = "SELECT      files_tags.file_id " ++
+            "FROM        files_tags " ++
+            "INNER JOIN  tags " ++
+            "ON          tags.name = ? " ++
+            "AND         files_tags.tag_id = tags.id"
+  ids ← queryWithClone conn sql [toSql tagName]
   return $ map fromSql (concat ids)
 
 
 filesFromTags ∷ Connection → [TagName] → IO [Entity]
 filesFromTags conn tagNames = do
-  dbg $ "!!! Find.filesFromTags: " ++ show tagNames
   fileIdLists ← mapM (fileIdsForTag conn) tagNames
-  dbg $ "!!! after queries"
-  
-  let tagName2fileIds = zip tagNames fileIdLists
-  dbg $ "tagName2fileIds: " ++ show tagName2fileIds
-
-  -- find ∩ of fileIds lists
-  let fileIds = foldr (\ids acc → intersect ids acc) [] fileIdLists
-
+  let fileIds = foldr1 (\ids acc → intersect ids acc) fileIdLists
   maybeEntities ← mapM (fileEntityById conn) fileIds
   return $ catMaybes maybeEntities      
 
@@ -93,20 +69,18 @@ fileEntityFromTagsAndName conn tagNames name = do
 -}
 tagsForFileName ∷ Connection → FileName → IO [TagName]
 tagsForFileName conn fileName = do
-  dbg $ "Find.tagsForFileName: " ++ show fileName
   maybeFileEntity ← fileEntityNamed conn fileName
-  dbg $ "  maybeFileEntity: " ++ show maybeFileEntity
   case maybeFileEntity of
     Nothing →
       return []
     Just (FileEntity fileId _) → do
       dbg $ "  inner join"
-      r ← quickQuery' conn ( "SELECT     ts.name " ++
-                             "FROM       tags ts " ++
-                             "INNER JOIN files_tags fts " ++
-                             "ON         ts.id = fts.tag_id " ++
-                             "AND        fts.file_id = ?"
-                           ) [toSql fileId]
+      let sql = "SELECT     ts.name " ++
+                "FROM       tags ts " ++
+                "INNER JOIN files_tags fts " ++
+                "ON         ts.id = fts.tag_id " ++
+                "AND        fts.file_id = ?"
+      r ← queryWithClone conn sql [toSql fileId]
       return $ map (fromSql . head) r
 
 
@@ -115,14 +89,11 @@ tagsForFileName conn fileName = do
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
 fileEntityNamed ∷ Connection → FileName → IO (Maybe Entity)
 fileEntityNamed conn name = do
-  dbg $ "Find.fileEntityNamed: " ++ name
   maybeRow ← findRowByName conn "files" name
-  -- dbg $ "  maybeRow: " ++ show maybeRow
   case maybeRow of
     Nothing →
       return Nothing
     Just [id, _, contents] → do
-      -- dbg $ "  id, contents: " ++ (fromSql id) ++ ", " ++ B.unpack (fromSql contents)
       return $ Just (FileEntity (fromSql id)
                       (File name (fromSql contents)))
 
@@ -179,15 +150,12 @@ findRowByVal ∷ Connection
              → IO (Maybe [SqlValue])
 findRowByVal conn tableName colName sqlVal = do
   dbg $ ">> Find.findRowByVal: " ++ fromSql sqlVal
-  let sql = ( "SELECT * " ++
-              "FROM   " ++ tableName ++ " " ++
-              "WHERE  " ++ tableName ++ "." ++ colName ++ " = ? " ++
-              "LIMIT  1" )
+  let sql = "SELECT * " ++
+            "FROM   " ++ tableName ++ " " ++
+            "WHERE  " ++ tableName ++ "." ++ colName ++ " = ? " ++
+            "LIMIT  1"
   dbg $ ">> sql: " ++ sql
-
-  -- THIS IS WHERE IT BREAKS.
-  
-  r ← quickQuery' conn sql [sqlVal]
+  r ← queryWithClone conn sql [sqlVal]
   dbg ">> after query"
   case r of
     [] → do
