@@ -3,30 +3,17 @@
 
 module FuseOps where
 
-import           Data.ByteString         (ByteString)
-import qualified Data.ByteString.Char8   as B
-import           Data.Maybe              (catMaybes)
-import           Data.Monoid             ((<>))
-
 import           System.Fuse
-import           System.IO
-import           System.Posix.Files
-import           System.Posix.Types
+import           System.Posix.Types      (EpochTime)
 
 import           Debug                   (dbg)
 import           Device                  (tCreateDevice)
-import           DB.Model
-import           DB.Find                 -- (filesFromTags)
-import           DB.Insert
+import           DB.Model                (DB)
 import           Dir                     (createDir, openDir, readDir)
-import           Node                    (nodeNamed)
-import           File                    ( tOpenFile, tReadFile, tWriteFile
-                                         , fileEntityFromPath  -- TODO: mv to utils
-                                         )
-import           Parse
-import           Stat                    ( dirStat, fileStat
-                                         , getFileSystemStats
-                                         )
+import           File                    (tOpenFile, tReadFile, tWriteFile)
+import           FileStat                (getFileStat)
+import           Remove                  (tRemoveLink)
+import           Stat                    (dirStat, fileStat, getFileSystemStats)
 import           Types
 
 
@@ -34,6 +21,7 @@ import           Types
 runFuse ∷ DB → IO ()
 runFuse db = do
   ctx ← getFuseContext
+  dbg "------------------------------------------------"
   fuseMain fuseOps defaultExceptionHandler
   where
     fuseOps ∷ FuseOperations NonHandle
@@ -57,7 +45,7 @@ runFuse db = do
       -- , fuseAccess             = tAccess
       , fuseCreateDevice       = tCreateDevice db
       , fuseRemoveLink         = tRemoveLink   db
-      , fuseSetFileTimes       = tSetFileTimes db
+      -- , fuseSetFileTimes       = tSetFileTimes db
 
       -- fuseReadSymbolicLink
       -- fuseCreateSymbolicLink
@@ -75,41 +63,6 @@ runFuse db = do
       -- fuseDestroy
       }
 
-
-{- | getattr: info about inode (number, owner, last access)
-   Should work for either Files or Dirs.
-   (Perhaps 'FileStat' should be renamed to 'NodeStat'?)
--}
-getFileStat ∷ DB → FilePath → IO (Either Errno FileStat)
-getFileStat db filePath = do
-  dbg $ "GetFileStat: " ++ filePath
-  ctx ← getFuseContext
-
-  case filePath of
-
-    -- What the hell is this?
-    "/._." →
-      return $ Left eNOENT
-
-    -- Root dir: show all files & tags.
-    "/" → do
-      return $ Right (dirStat ctx)
-
-    -- File or Dir?
-    _ → do
-      maybeFileEntity ← fileEntityFromPath db filePath
-      case maybeFileEntity of
-
-        -- TODO: store stat info w/ file & return it here.
-        Just (FileEntity _ _) →
-          return $ Right (fileStat ctx)
-
-        Nothing → do
-          -- error "need a function that recursively looks up stats"
-          fileEntities ← filesFromTags db (parseDirPath filePath)
-          if null fileEntities
-            then return $ Left eNOENT
-            else return $ Right (dirStat ctx)
 
 
 --------------------
@@ -133,32 +86,3 @@ tAccess filePath _ = do
   dbg $ "Access: " ++ filePath
   return eOK
 
-
---------------------
-
-
-{- | unlink(const char* path)
-
-   Remove (delete) the given file, symbolic link, hard link, or
-   special node. Note that if you support hard links, unlink only
-   deletes the data when the last hard link is removed. See unlink(2)
-   for details.
--}
-tRemoveLink ∷ DB → FilePath → IO Errno
-tRemoveLink db filePath = do
-  dbg $ "RemoveLink: " ++ filePath
-  let (_:fileName) = filePath
-  
-  maybeNode ← nodeNamed db fileName
-  case maybeNode of
-
-    Nothing →
-      return eNOENT
-
-    Just _ → do
-      rmNodeByName db fileName
-      return eOK
-
-
-rmNodeByName ∷ DB → FileName → IO ()
-rmNodeByName db fileName = undefined

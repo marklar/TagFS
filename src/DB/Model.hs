@@ -7,7 +7,7 @@ import           Data.ByteString
 import           Database.HDBC
 import           Database.HDBC.Sqlite3
 import           Control.Monad.IO.Class  (liftIO)
-
+import Debug
 
 type DB = Connection
 type FileName = String
@@ -55,14 +55,6 @@ disconnect ∷ DB → IO ()
 disconnect = Database.HDBC.disconnect
 
 
-withClone ∷ DB → (DB → IO α) → IO α
-withClone db f = do
-  db' ← DB.Model.clone db
-  r ← f db'
-  DB.Model.disconnect db'
-  return r
-
-
 execWithClone ∷ DB → String → [SqlValue] → IO ()
 execWithClone db sql args =
   withClone db (\c → do
@@ -74,3 +66,12 @@ execWithClone db sql args =
 queryWithClone ∷ DB → String → [SqlValue] → IO [[SqlValue]]
 queryWithClone db sql args =
   withClone db (\c → quickQuery' c sql args)
+
+
+withClone ∷ DB → (DB → IO α) → IO α
+withClone db f = do
+  db' ← DB.Model.clone db
+  r ← catchSql (f db')
+        (\e → do dbg $ "ERROR: " ++ show e; f db')
+  DB.Model.disconnect db'
+  return r

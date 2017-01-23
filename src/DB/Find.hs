@@ -2,14 +2,12 @@
 
 module DB.Find where
 
--- import           Data.ByteString         (ByteString)
 import qualified Data.ByteString.Char8   as B
 
 import           Control.Monad            (liftM)
 import           Data.Maybe               (isJust, catMaybes)
-import           Data.List                (intercalate, intersect)
-import           Database.HDBC            ( SqlValue, quickQuery'
-                                          , fromSql, toSql, catchSql )
+import           Data.List                (intersect)
+import           Database.HDBC            (SqlValue, fromSql, toSql)
 import           Database.HDBC.Sqlite3    (Connection)
 
 import           Debug

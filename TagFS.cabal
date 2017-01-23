@@ -23,9 +23,11 @@ library
                      , Device
                      , Dir
                      , File
+                     , FileStat
                      , FuseOps
                      , Node
                      , Parse
+                     , Remove
                      , Stat
                      , Tag
                      , Types
