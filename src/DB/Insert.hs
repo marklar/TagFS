@@ -51,8 +51,8 @@ rmFileTag conn fileId tagName = do
   let sql = "DELETE FROM files_tags " ++
             "WHERE       file_id = ? " ++
             "AND         tag_id IN " ++
-            "( SELECT id " ++
+            "( SELECT tags.id " ++
             "  FROM   tags " ++
-            "  WHERE  name = ? )"
+            "  WHERE  tags.name = ? )"
       args = [toSql fileId, toSql tagName]
   execWithClone conn sql args

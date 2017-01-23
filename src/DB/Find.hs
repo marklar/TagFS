@@ -2,10 +2,12 @@
 
 module DB.Find
   ( allFileEntities
+  , allTagEntities
   , fileEntitiesFromTags
   , fileEntityFromTagsAndName
   , fileEntityNamed
   , tagEntityNamed
+  , tagsForFileName
   ) where
 
 
@@ -20,8 +22,7 @@ import           DB.Row                   (findRowById, findRowByName)
 
 allFileEntities ∷ DB → IO [Entity]
 allFileEntities db = do
-  let sql = "SELECT      * " ++
-            "FROM        files "
+  let sql = "SELECT * FROM files"
   valLists ← queryWithClone db sql []
   return $ map rowToEntity valLists
   where
@@ -29,7 +30,19 @@ allFileEntities db = do
     rowToEntity [id, name, contents] =
       FileEntity (fromSql id) (File (fromSql name) (fromSql contents))
 
-  
+
+allTagEntities db = do
+  let sql = "SELECT * FROM tags"
+  valLists ← queryWithClone db sql []
+  return $ map rowToEntity valLists
+  where
+    rowToEntity ∷ [SqlValue] → Entity
+    rowToEntity [id, name] =
+      TagEntity (fromSql id) (Tag (fromSql name))
+
+
+-----------------------
+
 
 {- | Works with non-null [TagName]. For [], we want all files.
 -}
@@ -114,7 +127,6 @@ tagsForFileName conn fileName = do
     Nothing →
       return []
     Just (FileEntity fileId _) → do
-      dbg $ "  inner join"
       let sql = "SELECT     ts.name " ++
                 "FROM       tags ts " ++
                 "INNER JOIN files_tags fts " ++
