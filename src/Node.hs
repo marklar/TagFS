@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
+
+{- | These functions take only the NAME, not the whole path.
+-}
 module Node
   ( nodeNamed
   , fileNodeNamed

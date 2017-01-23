@@ -2,28 +2,61 @@
 
 module DB.Find where
 
+-- import           Data.ByteString         (ByteString)
+import qualified Data.ByteString.Char8   as B
+
 import           Control.Monad            (liftM)
 import           Data.Maybe               (isJust, catMaybes)
-import           Data.List                (intercalate)
-import           Database.HDBC            (SqlValue, quickQuery', fromSql, toSql)
+import           Data.List                (intercalate, intersect)
+import           Database.HDBC            ( SqlValue, quickQuery'
+                                          , fromSql, toSql
+                                          , prepare, run, execute
+                                          , catchSql
+                                          )
 import           Database.HDBC.Sqlite3    (Connection)
 
+import           Debug
 import           DB.Model
+
+
+fileIdsForTag ∷ Connection → TagName → IO [FileId]
+fileIdsForTag conn tagName = do
+  dbg $ "!!! query: " ++ tagName
+
+  tagIds ←
+    catchSql (quickQuery' conn
+               "SELECT tags.id FROM tags WHERE tags.name = ?"
+               [toSql tagName]) (\e → do
+                                    dbg $ "catch: " ++ show e
+                                    return [])
+    
+  dbg $ "!!! after tagIds query: " ++ show tagIds
+  
+  ids ← quickQuery' conn
+        ( "SELECT      files_tags.file_id " ++
+          "FROM        files_tags " ++
+          "INNER JOIN  tags " ++
+          "ON          tags.name LIKE ? " ++
+          "AND         files_tags.tag_id = tags.id" )
+        [toSql tagName]
+  dbg $ "!!! ids: " ++ show ids
+  return $ map fromSql (concat ids)
 
 
 filesFromTags ∷ Connection → [TagName] → IO [Entity]
 filesFromTags conn tagNames = do
-  r ← quickQuery' conn ( "SELECT      ft.file_id, COUNT(t.tag_id) " ++
-                         "FROM        files_tags ft " ++
-                         "INNER JOIN  tags t " ++
-                         "ON          t.name in (?) " ++
-                         "AND         t.id = ft.tag_id "
-                       ) [toSql $ intercalate "," tagNames]
-  let fileIds =
-        map (fromSql . head) $
-        filter (\[_, numTags] → (fromSql numTags ∷ Int) == 3) r
-  maybeEntities ← sequence $ map (fileEntityById conn) fileIds
-  return $ catMaybes maybeEntities
+  dbg $ "!!! Find.filesFromTags: " ++ show tagNames
+  fileIdLists ← mapM (fileIdsForTag conn) tagNames
+  dbg $ "!!! after queries"
+  
+  let tagName2fileIds = zip tagNames fileIdLists
+  dbg $ "tagName2fileIds: " ++ show tagName2fileIds
+
+  -- find ∩ of fileIds lists
+  let fileIds = foldr (\ids acc → intersect ids acc) [] fileIdLists
+
+  maybeEntities ← mapM (fileEntityById conn) fileIds
+  return $ catMaybes maybeEntities      
 
 
 fileEntityById ∷ Connection → FileId → IO (Maybe Entity)
@@ -45,10 +78,14 @@ fileEntityFromTagsAndName ∷ Connection
                           → FileName     -- ^ File name
                           → IO (Maybe Entity)
 fileEntityFromTagsAndName conn tagNames name = do
-  allTagNames ← tagsForFileName conn name
-  if all (\n → elem n allTagNames) tagNames
-    then fileEntityNamed conn name
-    else return Nothing
+  if name == "._."
+    then return Nothing
+    else do dbg $ "Find.fileEntityFromTagsAndName, tagNames: " ++ show tagNames
+            allTagNames ← tagsForFileName conn name
+            dbg $ "  allTagNames: " ++ show allTagNames
+            if all (\n → elem n allTagNames) tagNames
+              then fileEntityNamed conn name
+              else return Nothing
 
 
 {- | Helper fn. Sometimes when you have the name of a file, you want to
@@ -56,11 +93,14 @@ fileEntityFromTagsAndName conn tagNames name = do
 -}
 tagsForFileName ∷ Connection → FileName → IO [TagName]
 tagsForFileName conn fileName = do
+  dbg $ "Find.tagsForFileName: " ++ show fileName
   maybeFileEntity ← fileEntityNamed conn fileName
+  dbg $ "  maybeFileEntity: " ++ show maybeFileEntity
   case maybeFileEntity of
     Nothing →
       return []
     Just (FileEntity fileId _) → do
+      dbg $ "  inner join"
       r ← quickQuery' conn ( "SELECT     ts.name " ++
                              "FROM       tags ts " ++
                              "INNER JOIN files_tags fts " ++
@@ -75,11 +115,14 @@ tagsForFileName conn fileName = do
 -- Find FileEntity. If not ∃, "<fileName>: No such file or directory"
 fileEntityNamed ∷ Connection → FileName → IO (Maybe Entity)
 fileEntityNamed conn name = do
+  dbg $ "Find.fileEntityNamed: " ++ name
   maybeRow ← findRowByName conn "files" name
+  -- dbg $ "  maybeRow: " ++ show maybeRow
   case maybeRow of
     Nothing →
       return Nothing
-    Just [id, _, contents] →
+    Just [id, _, contents] → do
+      -- dbg $ "  id, contents: " ++ (fromSql id) ++ ", " ++ B.unpack (fromSql contents)
       return $ Just (FileEntity (fromSql id)
                       (File name (fromSql contents)))
 
@@ -117,7 +160,7 @@ findRowByName ∷ Connection
               → String   -- ^ table name
               → String   -- ^ name value
               → IO (Maybe [SqlValue])
-findRowByName conn tableName name = do
+findRowByName conn tableName name =
   findRowByVal conn tableName "name" (toSql name)
 
 
@@ -125,23 +168,29 @@ findRowById ∷ Connection
             → String   -- ^ table name
             → Integer  -- ^ row ID
             → IO (Maybe [SqlValue])
-findRowById conn tableName id = do
+findRowById conn tableName id =
   findRowByVal conn tableName "id" (toSql id)
-
+  
 
 findRowByVal ∷ Connection
              → String   -- ^ table name
              → String   -- ^ column name
              → SqlValue
              → IO (Maybe [SqlValue])
-findRowByVal conn tableName colName val = do
-  r ← quickQuery' conn ( "SELECT * " ++
-                         "FROM   ? " ++
-                         "WHERE  ? = ? " ++
-                         "LIMIT  1" )
-      [toSql tableName, toSql colName, val]
+findRowByVal conn tableName colName sqlVal = do
+  dbg $ ">> Find.findRowByVal: " ++ fromSql sqlVal
+  let sql = ( "SELECT * " ++
+              "FROM   " ++ tableName ++ " " ++
+              "WHERE  " ++ tableName ++ "." ++ colName ++ " = ? " ++
+              "LIMIT  1" )
+  dbg $ ">> sql: " ++ sql
+
+  -- THIS IS WHERE IT BREAKS.
+  
+  r ← quickQuery' conn sql [sqlVal]
+  dbg ">> after query"
   case r of
-    [] →
+    [] → do
       return Nothing
-    vals : _ →
+    vals : _ → do
       return $ Just vals

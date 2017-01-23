@@ -14,9 +14,14 @@ import           System.Posix.Types
 
 import           Debug                   (dbg)
 import           DB.Model
+import           DB.Find                 -- (filesFromTags)
 import           Dir                     (createDir, openDir, readDir)
 import           Node                    (nodeNamed)
-import           File                    (tOpenFile, tReadFile, tWriteFile)
+import           File                    ( tOpenFile
+                                         , tReadFile
+                                         , tWriteFile
+                                         , fileEntityFromPath  -- TODO: mv to utils
+                                         )
 import           Parse
 import           Stat                    ( dirStat, fileStat
                                          , getFileSystemStats
@@ -56,7 +61,7 @@ runFuse db = do
 
               -- Either
               , fuseGetFileStat        = getFileStat db
-              , fuseAccess             = tAccess
+              -- , fuseAccess             = tAccess
               , fuseCreateDevice       = tCreateDevice db
               , fuseRemoveLink         = tRemoveLink db
               , fuseSetFileTimes       = tSetFileTimes db
@@ -95,41 +100,45 @@ getFileStat ∷ DB → FilePath → IO (Either Errno FileStat)
 getFileStat db filePath = do
   dbg $ "GetFileStat: " ++ filePath
 
-  case filePath of
+  -- foo ← findRowByName db "files" "football.txt"
+  -- dbg $ "foo: " ++ show foo
 
-    -- Root dir:
-    -- Special case, as it's the absence of any tags.
-    -- But are we allowed to have any untagged files?
-    -- Or do we show all the files as part of the root dir?
+  case filePath of
+    "/._." →
+      return $ Left eNOENT
+
     "/" → do
+      -- Root dir: Special case, as it's the absence of any tags.
+      -- dbg "  for '/'"
       ctx ← getFuseContext
-      dbg "  for '/'"
       return $ Right (dirStat ctx)
 
-
-    -- Look up just by the fileName
     _ → do
+      dbg "  Not '/'. First trying as File."
+      -- FilePath might be *either*:
+      --   - just a directory (e.g. "sports/packers")
+      --   - a file (e.g. "sports/packers/football.txt"
+      maybeFileEntity ← fileEntityFromPath db filePath
+      dbg "  After fileEntityFromPath"
 
-      -- FIXME: filePath might be *either*:
-      --   + just a directory (e.g. "sports/packers")
-      --   + a file (e.g. "sports/packers/football.txt"
-      let (fileName:restOfPath) = pathParts filePath
-      dbg $ "  finding node of name: " ++ fileName
-      maybeNode ← nodeNamed db fileName
-      case maybeNode of
+      case maybeFileEntity of
+
+        Just (FileEntity _ _) → do
+          dbg "  Found file"
+          ctx ← getFuseContext
+          return $ Right (fileStat ctx)
 
         Nothing → do
-          dbg $ "  Failed to find " ++ fileName
-          return (Left eNOENT)
-
-        Just (FileNode stat _) → do
-          dbg "  Found file"
-          return (Right stat)
-
-        Just (DirNode stat) → do
-          dbg "  Found dir"
           -- error "need a function that recursively looks up stats"
-          return (Right stat)
+          let tagNames = parseDirPath filePath
+          dbg $ "  Trying as dir w/ tagNames: " ++ show tagNames
+          fileEntities ← filesFromTags db tagNames
+          dbg $ "  after filesFromTags: " ++ show fileEntities
+          if null fileEntities
+            then return $ Left eNOENT
+            else do dbg "  Found dir"
+                    ctx ← getFuseContext
+                    return $ Right (dirStat ctx)
 
 
 --------------------
@@ -172,13 +181,14 @@ tSetFileTimes ∷ DB → FilePath → EpochTime → EpochTime → IO Errno
 tSetFileTimes db filePath t1 t2 = return eOK
 
 
-{- | access(const char* path, mask)
+{- | This is the same as the access(2) system call.
 
-This is the same as the access(2) system call. It returns -ENOENT if
-the path doesn't exist, -EACCESS if the requested permission isn't
-available, or 0 for success. Note that it can be called on files,
-directories, or any other object that appears in the filesystem. This
-call is not required but is highly recommended.
+It returns:
+  + eNOENT  - if the path doesn't exist
+  + eACCESS - if the requested permission isn't available
+  + eOK     - for success
+
+Can be called on files, dirs, or any other object in the FS.
 -}
 tAccess ∷ FilePath → Int → IO Errno
 tAccess filePath _ = do

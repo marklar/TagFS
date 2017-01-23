@@ -38,6 +38,7 @@ removeDir db filePath = do
   -- Split filePath into [Tag].
   let tagNames = parseDirPath filePath
   -- Find all files (if any) with that (complete) tagSet.
+  -- filesFromTags ∷ Connection → [TagName] → IO [Entity]
   fileEntities ← filesFromTags db tagNames
   if null fileEntities
     then return eNOENT
@@ -123,11 +124,9 @@ openDir db filePath = do
   dbg $ "Opening dir " ++ filePath
   if filePath == "/"
     then return eOK
-    else do let (_:fileName) = filePath
-            -- FIXME: Logic is too simple.
-            -- Check whether any files have this combo of tags.
-            ex ← tagExists db fileName
-            if ex
-              then return eOK
-              else return eNOENT
-
+    else do let tagNames = parseDirPath filePath
+            fileEntities ← filesFromTags db tagNames
+            if null fileEntities
+              then return eNOENT
+              else do dbg "  Found dir"
+                      return eOK
