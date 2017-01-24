@@ -11,7 +11,9 @@ module DB.Write
 
 
 import           Database.HDBC
+
 import           DB.Base
+import           Debug
 
 
 updateFile ∷ DB → File → IO ()
@@ -49,6 +51,7 @@ mkFileTag conn fileId tagId = do
 
 rmFileTag ∷ DB → FileId → TagName → IO ()
 rmFileTag conn fileId tagName = do
+  dbg $ "rmFileTag: " ++ tagName
   let sql = "DELETE FROM files_tags " ++
             "WHERE       file_id = ? " ++
             "AND         tag_id IN " ++

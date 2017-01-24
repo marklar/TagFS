@@ -5,6 +5,7 @@ module Dir.Create
   ( createDir
   ) where
 
+import           Database.HDBC           (fromSql, toSql)
 import           System.Fuse
 import           System.Posix.Types      (FileMode)
 
@@ -31,8 +32,21 @@ createDir db filePath mode = do
       -- Create FileTag for each of tagNames.
       -- FIXME: use newDirStat
       tagIds ← mapM (findOrCreateTagId db) tagNames
-      mapM_ (mkFileTag db dummyFileId) tagIds
+      mapM_ (ensureFileTag db dummyFileId) tagIds
       return eOK
+
+
+-- ^ find or make
+ensureFileTag ∷ DB → FileId → TagId → IO ()
+ensureFileTag db fileId tagId = do
+  let sql = "SELECT  * " ++
+            "FROM    files_tags " ++
+            "WHERE   file_id = ? " ++
+            "AND     tag_id  = ?"
+  rows ← queryWithClone db sql [toSql fileId, toSql tagId]
+  if null rows
+    then mkFileTag db fileId tagId
+    else return ()
 
 
 newDirStat ∷ FileMode → IO FileStat
