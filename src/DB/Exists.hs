@@ -7,7 +7,7 @@ module Exists where
 
 import           Control.Monad            (liftM)
 import           Data.Maybe               (isJust)
-import           DB.Model
+import           DB.Base
 import           DB.Row                   (findRowByName)
 
 

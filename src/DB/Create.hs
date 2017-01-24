@@ -3,7 +3,7 @@
 module DB.Create where
 
 import           Database.HDBC           (run, commit)
-import           DB.Model
+import           DB.Base
 
 
 createDb ∷ FilePath → IO ()

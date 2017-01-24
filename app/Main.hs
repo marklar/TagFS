@@ -1,7 +1,7 @@
 {-# LANGUAGE UnicodeSyntax #-}
 module Main where
 
-import           DB.Model
+import           DB.Base
 import           FuseOps
 
 

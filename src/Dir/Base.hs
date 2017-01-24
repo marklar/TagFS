@@ -9,7 +9,7 @@ module Dir.Base
 
 import           System.Fuse
 
-import           DB.Model
+import           DB.Base
 import           DB.Read
 import           DB.Write
 import           Debug                   (dbg)

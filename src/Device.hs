@@ -10,7 +10,7 @@ import           System.Posix.Files
 import           System.Posix.Types
 
 import           Debug                   (dbg)
-import           DB.Model
+import           DB.Base
 import           DB.Read
 import           DB.Write
 import           Parse

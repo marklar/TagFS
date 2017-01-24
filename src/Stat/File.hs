@@ -6,7 +6,7 @@ module Stat.File where
 import           System.Fuse
 
 import           Debug                   (dbg)
-import           DB.Model
+import           DB.Base
 import           DB.Read                 ( fileEntitiesFromTags
                                          , fileEntityFromPath )
 import           Parse                   (parseDirPath)

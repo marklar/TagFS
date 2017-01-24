@@ -17,7 +17,7 @@ import           Data.List                (intersect)
 import           Database.HDBC            (SqlValue, fromSql, toSql)
 
 import           Debug
-import           DB.Model
+import           DB.Base
 import           DB.Row                   (findRowById, findRowByName)
 import           Parse                    (parseFilePath)
 

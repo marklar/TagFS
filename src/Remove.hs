@@ -5,7 +5,7 @@ module Remove where
 
 import           System.Fuse
 
-import           DB.Model
+import           DB.Base
 import           Debug                   (dbg)
 import           Node                    (nodeNamed)
 

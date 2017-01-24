@@ -17,7 +17,7 @@ import           System.IO
 import           System.Posix.Files
 import           System.Posix.Types
 
-import           DB.Model
+import           DB.Base
 import           DB.Read
 import           DB.Write                (updateFile)
 import           Debug                   (dbg)

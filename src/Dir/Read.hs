@@ -10,7 +10,7 @@ import           Data.Maybe              (catMaybes)
 import           System.Fuse
 import           System.Posix.Types
 
-import           DB.Model
+import           DB.Base
 import           DB.Read
 import           DB.Write
 import           Debug                   (dbg)

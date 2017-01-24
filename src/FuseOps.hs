@@ -8,7 +8,7 @@ import           System.Posix.Types      (EpochTime)
 
 import           Debug                   (dbg)
 import           Device                  (tCreateDevice)
-import           DB.Model                (DB)
+import           DB.Base                 (DB)
 import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)

@@ -4,9 +4,9 @@
 -}
 module Tag where
 
-import           DB.Find
-import           DB.Insert
-import           DB.Model
+import           DB.Base
+import           DB.Read
+import           DB.Write
 
 
 multiTagFile ∷ DB → FileName → [TagName] → IO ()

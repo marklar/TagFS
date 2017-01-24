@@ -10,7 +10,7 @@ module DB.Write
 
 
 import           Database.HDBC
-import           DB.Model
+import           DB.Base
 
 
 updateFile ∷ DB → File → IO ()

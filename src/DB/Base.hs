@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DB.Model where
+module DB.Base where
 
 import           Data.ByteString
 import           Database.HDBC
@@ -70,8 +70,8 @@ queryWithClone db sql args =
 
 withClone ∷ DB → (DB → IO α) → IO α
 withClone db f = do
-  db' ← DB.Model.clone db
+  db' ← DB.Base.clone db
   r ← catchSql (f db')
         (\e → do dbg $ "ERROR: " ++ show e; f db')
-  DB.Model.disconnect db'
+  DB.Base.disconnect db'
   return r

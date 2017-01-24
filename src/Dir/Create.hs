@@ -8,7 +8,7 @@ module Dir.Create
 import           System.Fuse
 import           System.Posix.Types      (FileMode)
 
-import           DB.Model
+import           DB.Base
 import           DB.Read
 import           DB.Write
 import           Debug                   (dbg)

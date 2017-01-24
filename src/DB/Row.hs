@@ -7,7 +7,7 @@ module DB.Row
 
 
 import           Database.HDBC            (SqlValue, fromSql, toSql)
-import           DB.Model
+import           DB.Base
 
 
 findRowByName ∷ DB
