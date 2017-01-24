@@ -1,6 +1,6 @@
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Stat
+module Stat.Base
   ( dirStat
   , fileStat
   , getFileSystemStats

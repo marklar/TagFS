@@ -14,7 +14,7 @@ import           DB.Model
 import           DB.Find
 import           DB.Insert
 import           Parse
-import           Stat                    (dirStat, fileStat)
+import           Stat.Base               (dirStat, fileStat)
 import           Types
 
 

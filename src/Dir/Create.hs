@@ -13,7 +13,7 @@ import           DB.Insert
 import           DB.Model
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
-import           Stat                    (dirStat)
+import           Stat.Base               (dirStat)
 
 
 {- | Create new tags (as necessary) for dirs in path.

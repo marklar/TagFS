@@ -16,7 +16,7 @@ import           System.Fuse             (getFuseContext)
 
 import           DB.Find                 (fileEntityNamed, tagEntityNamed)
 import           DB.Model
-import           Stat                    (dirStat, fileStat)
+import           Stat.Base               (dirStat, fileStat)
 import           Types
 
 

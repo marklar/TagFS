@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module FileStat where
+module Stat.File where
 
 import           System.Fuse
 
@@ -10,7 +10,7 @@ import           DB.Model
 import           DB.Find                 (fileEntitiesFromTags)
 import           File                    (fileEntityFromPath)  -- TODO: mv to utils
 import           Parse                   (parseDirPath)
-import           Stat                    (dirStat, fileStat)
+import           Stat.Base               (dirStat, fileStat)
 
 
 {- | getattr: info about inode (number, owner, last access)

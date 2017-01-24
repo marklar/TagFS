@@ -15,7 +15,7 @@ import           DB.Insert               -- (rmFileTag)   -- FIXME
 import           DB.Model
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
-import           Stat                    (dirStat, fileStat)
+import           Stat.Base               (dirStat, fileStat)
 
 
 {- | Entire contents of dir. Not just files - also sub-dirs (tags).

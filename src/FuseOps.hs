@@ -13,9 +13,9 @@ import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)
 import           File                    (tOpenFile, tReadFile, tWriteFile)
-import           FileStat                (getFileStat)
 import           Remove                  (tRemoveLink)
-import           Stat                    (getFileSystemStats)
+import           Stat.Base               (getFileSystemStats)
+import           Stat.File               (getFileStat)
 import           Types
 
 
@@ -29,7 +29,7 @@ runFuse db = do
     fuseOps ∷ FuseOperations NonHandle
     fuseOps =
       defaultFuseOps
-      { fuseGetFileSystemStats = Stat.getFileSystemStats
+      { fuseGetFileSystemStats = Stat.Base.getFileSystemStats
 
       -- Dir
       , fuseCreateDirectory    = Dir.Create.createDir db

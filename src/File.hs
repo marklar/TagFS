@@ -24,7 +24,7 @@ import           DB.Insert               (updateFile)
 import           Debug                   (dbg)
 import           Node                    (fileNodeNamed)
 import           Parse
-import           Stat
+import           Stat.Base
 import           Types
 
 
@@ -105,7 +105,7 @@ tWriteFile db filePath _ bytes offset = do
       dbg $ "  found: -- " ++ name
       -- FIXME: need to store fStat in DB w/ file
       ctx ← getFuseContext
-      writeFile (Stat.fileStat ctx) (File name contents)
+      writeFile (fileStat ctx) (File name contents)
   where
     writeFile fStat (File name contents) = do
       let contents' = B.take ((fromIntegral offset) - 1) contents <> bytes
