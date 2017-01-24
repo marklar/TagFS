@@ -63,7 +63,7 @@ rmFileTag conn fileId tagName = do
 rmFile ∷ DB → FileId → IO ()
 rmFile conn fileId = do
   let sql1 = "DELETE FROM files " ++
-             "WHERE       file_id = ? "
+             "WHERE       id = ? "
       sql2 = "DELETE FROM files_tags " ++
              "WHERE       file_id = ? "
   flip mapM_ [sql1, sql2]

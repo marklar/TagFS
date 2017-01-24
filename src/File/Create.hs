@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Device
+module File.Create
   ( tCreateDevice
   ) where
 

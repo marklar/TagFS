@@ -7,13 +7,13 @@ import           System.Fuse
 import           System.Posix.Types      (EpochTime)
 
 import           Debug                   (dbg)
-import           Device                  (tCreateDevice)
 import           DB.Base                 (DB)
 import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)
-import           File                    (tOpenFile, tReadFile, tWriteFile)
-import           Remove                  (tRemoveLink)
+import           File.Base               (tOpenFile, tReadFile, tWriteFile)
+import           File.Create             (tCreateDevice)
+import           File.Remove             (tRemoveLink)
 import           Stat.Base               (getFileSystemStats)
 import           Stat.File               (getFileStat)
 import           Types
@@ -29,23 +29,23 @@ runFuse db = do
     fuseOps ∷ FuseOperations NonHandle
     fuseOps =
       defaultFuseOps
-      { fuseGetFileSystemStats = Stat.Base.getFileSystemStats
+      { fuseGetFileSystemStats = getFileSystemStats
 
       -- Dir
-      , fuseCreateDirectory    = Dir.Create.createDir db
-      , fuseOpenDirectory      = Dir.Base.openDir   db
-      , fuseRemoveDirectory    = Dir.Base.removeDir db
-      , fuseReadDirectory      = Dir.Read.readDir   db
+      , fuseCreateDirectory    = createDir db
+      , fuseOpenDirectory      = openDir   db
+      , fuseRemoveDirectory    = removeDir db
+      , fuseReadDirectory      = readDir   db
 
       -- File
-      , fuseOpen               = File.tOpenFile  db
-      , fuseRead               = File.tReadFile  db
-      , fuseWrite              = File.tWriteFile db
+      , fuseCreateDevice       = tCreateDevice db
+      , fuseOpen               = tOpenFile  db
+      , fuseRead               = tReadFile  db
+      , fuseWrite              = tWriteFile db
 
       -- Any kind of entry (node)
       , fuseGetFileStat        = getFileStat   db
       -- , fuseAccess             = tAccess
-      , fuseCreateDevice       = tCreateDevice db
       , fuseRemoveLink         = tRemoveLink   db
       -- , fuseSetFileTimes       = tSetFileTimes db
 
@@ -53,7 +53,7 @@ runFuse db = do
       -- fuseCreateSymbolicLink
       -- fuseRename
       -- fuseCreateLink
-      -- fuseSetFileMode
+      , fuseSetFileMode        = \_ _ → return eOK
       -- fuseSetOwnerAndGroup
       -- fuseSetFileSize
       -- fuseFlush

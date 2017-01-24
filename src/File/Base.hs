@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module File
+module File.Base
   ( tOpenFile
   , tReadFile
   , tWriteFile

@@ -21,15 +21,15 @@ library
                      , DB.Row
                      , DB.Write
                      , Debug
-                     , Device
                      , Dir.Base
                      , Dir.Create
                      , Dir.Read
-                     , File
+                     , File.Base
+                     , File.Create
+                     , File.Remove
                      , FuseOps
                      , Node
                      , Parse
-                     , Remove
                      , Stat.Base
                      , Stat.File
                      , Types

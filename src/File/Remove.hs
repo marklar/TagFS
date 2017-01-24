@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Remove where
+module File.Remove where
 
 import           System.Fuse
 
