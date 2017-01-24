@@ -23,13 +23,14 @@ library
                      , DB.Row
                      , Debug
                      , Device
-                     , Dir
+                     , Dir.Base
+                     , Dir.Create
+                     , Dir.Read
                      , File
                      , FileStat
                      , FuseOps
                      , Node
                      , Parse
-                     , ReadDir
                      , Remove
                      , Stat
                      -- , Tag

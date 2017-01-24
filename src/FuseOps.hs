@@ -9,12 +9,13 @@ import           System.Posix.Types      (EpochTime)
 import           Debug                   (dbg)
 import           Device                  (tCreateDevice)
 import           DB.Model                (DB)
-import           Dir                     (createDir, openDir, removeDir)
+import           Dir.Base                (openDir, removeDir)
+import           Dir.Create              (createDir)
+import           Dir.Read                (readDir)
 import           File                    (tOpenFile, tReadFile, tWriteFile)
 import           FileStat                (getFileStat)
-import           ReadDir                 (readDir)
 import           Remove                  (tRemoveLink)
-import           Stat                    (dirStat, fileStat, getFileSystemStats)
+import           Stat                    (getFileSystemStats)
 import           Types
 
 
@@ -31,10 +32,10 @@ runFuse db = do
       { fuseGetFileSystemStats = Stat.getFileSystemStats
 
       -- Dir
-      , fuseCreateDirectory    = Dir.createDir db
-      , fuseOpenDirectory      = Dir.openDir   db
-      , fuseRemoveDirectory    = Dir.removeDir db
-      , fuseReadDirectory      = ReadDir.readDir db
+      , fuseCreateDirectory    = Dir.Create.createDir db
+      , fuseOpenDirectory      = Dir.Base.openDir   db
+      , fuseRemoveDirectory    = Dir.Base.removeDir db
+      , fuseReadDirectory      = Dir.Read.readDir   db
 
       -- File
       , fuseOpen               = File.tOpenFile  db

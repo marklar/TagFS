@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module ReadDir
+module Dir.Read
   ( readDir
   ) where
 
