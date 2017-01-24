@@ -16,16 +16,6 @@ type FileId = Integer
 type TagId = Integer
 
 
-data File = File { fileName ∷ FileName
-                 , fileContents ∷ ByteString
-                 }
-            deriving (Show)
-
-
-data Tag = Tag TagName
-         deriving (Show)
-
-
 data Entity
   = TagEntity { tagId ∷ Integer
               , tag ∷ Tag
@@ -34,6 +24,16 @@ data Entity
                , file ∷ File
                }
   deriving (Show)
+
+
+data File = File { fileName ∷ FileName
+                 , fileContents ∷ ByteString
+                 }
+            deriving (Show)
+
+
+data Tag = Tag TagName
+         deriving (Show)
 
 
 -- unused?

@@ -29,6 +29,7 @@ library
                      , FuseOps
                      , Node
                      , Parse
+                     , ReadDir
                      , Remove
                      , Stat
                      -- , Tag

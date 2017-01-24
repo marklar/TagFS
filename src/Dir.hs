@@ -4,79 +4,20 @@
 module Dir
   ( createDir
   , openDir
-  , readDir
   , removeDir
   ) where
 
-import           Data.List               (union, (\\))
-import           Data.Maybe              (catMaybes)
 import           System.Fuse
 import           System.Posix.Types
 
 import           DB.Find
-import           DB.Insert               (rmFileTag)   -- FIXME
+import           DB.Insert               -- (rmFileTag)   -- FIXME
 import           DB.Model
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
-import           Stat                    (dirStat, fileStat)
+import           Stat                    (dirStat)
 
 
-{- | Entire contents of dir. Not just files - also sub-dirs (tags).
--}
-readDir ∷ DB → FilePath → IO (Either Errno [(FilePath, FileStat)])
-readDir db filePath = do
-  dbg $ "ReadDir: " ++ filePath
-
-  ctx ← getFuseContext
-  let baseDirs = [ (".",  dirStat ctx)
-                 , ("..", dirStat ctx)
-                 ]
-
-  if filePath == "/"
-    -- Include ALL TAGS and ALL FILES.
-    then do fileEntities ← allFileEntities db
-            files ← fileNamesWithStats db fileEntities
-            tagEntities ← allTagEntities db
-            tags ← tagNamesWithStats db tagEntities
-            return $ Right (baseDirs ++ tags ++ files)
-
-    -- Find all files (if any) with that (complete) tagSet.
-    else do let tagNames = parseDirPath filePath
-            fileEntities ← fileEntitiesFromTags db tagNames
-            dbg $ "  num files: " ++ (show $ length fileEntities)
-            if null fileEntities
-              then return $ Left eNOENT
-              else do files ← fileNamesWithStats db fileEntities
-                      tagEntities ← allTagsForFilesExcept db fileEntities tagNames
-                      -- filter out the ones whose name match here
-                      tags ← tagNamesWithStats db tagEntities
-                      return $ Right (baseDirs ++ files ++ tags)
-
-
-allTagsForFilesExcept ∷ DB → [Entity] → [TagName] → IO [Entity]
-allTagsForFilesExcept db fileEntities tagNames = do
-  let fileNames = map (\(FileEntity _ (File name _)) → name) fileEntities
-  tagNameLists ← mapM (tagsForFileName db) fileNames
-  let allTagNames = foldr1 union tagNameLists
-  maybeEntities ← mapM (tagEntityNamed db) (allTagNames \\ tagNames)
-  return $ catMaybes maybeEntities
-
-
-tagNamesWithStats ∷ DB → [Entity] → IO [(FileName, FileStat)]
-tagNamesWithStats db tagEntities = do
-  ctx ← getFuseContext
-  return $ flip map tagEntities (\(TagEntity _ (Tag name)) →
-                                   (name, dirStat ctx))
-
-
-fileNamesWithStats ∷ DB → [Entity] → IO [(FileName, FileStat)]
-fileNamesWithStats db fileEntities = do
-  ctx ← getFuseContext
-  return $ flip map fileEntities (\(FileEntity _ (File name _)) →
-                                    (name, fileStat ctx))
-
-
---------------------
 
 {- | If filePath maps to a dir: eOK. Else: eNOENT.
 -}
@@ -100,19 +41,46 @@ openDir db filePath = do
 createDir ∷ DB → FilePath → FileMode → IO Errno
 createDir db filePath mode = do
   dbg $ "createDir w/ path: " ++ filePath
+  case parseDirPath filePath of
+    [] →
+      return eNOENT
 
+    tagNames → do
+      -- Create a dummy file to inhabit it. (Don't display it.)
+      dummyFileId ← findOrCreateDummyFileId db
+      -- Create FileTag for each of tagNames.
+      -- FIXME: use newDirStat
+      tagIds ← mapM (findOrCreateTagId db) tagNames
+      mapM_ (mkFileTag db dummyFileId) tagIds
+      return eOK
+
+
+newDirStat ∷ FileMode → IO FileStat
+newDirStat mode = do
   ctx ← getFuseContext
-  let (_:fileName) = filePath
-  let newStat = (dirStat ctx) { statFileMode = mode }
-  createNewTags db fileName newStat
-  return eOK
+  return $ (dirStat ctx) { statFileMode = mode }
+  
+
+findOrCreateTagId ∷ DB → TagName → IO TagId
+findOrCreateTagId db tagName = do
+  maybeTagEntity ← tagEntityNamed db tagName
+  case maybeTagEntity of
+    Just te →
+      return $ tagId te
+    Nothing → do
+      mkTag db (Tag tagName)
+      findOrCreateTagId db tagName
 
 
--- TODO
-{- | What's in FileName? So we know how to use it to create tag(s).
--}
-createNewTags ∷ DB → FileName → FileStat → IO ()
-createNewTags db fileName fStat = undefined
+findOrCreateDummyFileId ∷ DB → IO FileId
+findOrCreateDummyFileId db = do
+  maybeFileEntity ← fileEntityNamed db "dummy"
+  case maybeFileEntity of
+    Just fe →
+      return $ fileId fe
+    Nothing → do
+      mkFile db (File "dummy" "")
+      findOrCreateDummyFileId db
 
 
 ----------------
