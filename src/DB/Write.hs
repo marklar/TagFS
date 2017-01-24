@@ -6,6 +6,7 @@ module DB.Write
   , mkFileTag
   , updateFile
   , rmFileTag
+  , rmFile
   ) where
 
 
@@ -56,3 +57,14 @@ rmFileTag conn fileId tagName = do
             "  WHERE  tags.name = ? )"
       args = [toSql fileId, toSql tagName]
   execWithClone conn sql args
+
+
+-- rm File (and all associated FileTags)
+rmFile ∷ DB → FileId → IO ()
+rmFile conn fileId = do
+  let sql1 = "DELETE FROM files " ++
+             "WHERE       file_id = ? "
+      sql2 = "DELETE FROM files_tags " ++
+             "WHERE       file_id = ? "
+  flip mapM_ [sql1, sql2]
+    (\s → execWithClone conn s [toSql fileId])

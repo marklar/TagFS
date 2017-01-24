@@ -75,7 +75,6 @@ fileEntityFromTagsAndName conn tagNames name = do
   if name == "._."
     then return Nothing
     else do allTagNames ← tagsForFileName conn name
-            -- dbg $ "  Find.fileEntityFromTagsAndName, tagNames: " ++ show tagNames
             if all (\n → elem n allTagNames) tagNames
               then fileEntityNamed conn name
               else return Nothing
