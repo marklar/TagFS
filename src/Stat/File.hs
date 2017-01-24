@@ -3,6 +3,8 @@
 
 module Stat.File where
 
+import           Data.ByteString         (ByteString)
+import qualified Data.ByteString.Char8   as B
 import           System.Fuse
 
 import           Debug                   (dbg)
@@ -10,7 +12,7 @@ import           DB.Base
 import           DB.Read                 ( fileEntitiesFromTags
                                          , fileEntityFromPath )
 import           Parse                   (parseDirPath)
-import           Stat.Base               (dirStat, fileStat)
+import           Stat.Base               (dirStat, contentsFileStat)
 
 
 {- | getattr: info about inode (number, owner, last access)
@@ -36,15 +38,12 @@ getFileStat db filePath = do
     _ → do
       maybeFileEntity ← fileEntityFromPath db filePath
       case maybeFileEntity of
-
-        -- TODO: store stat info w/ file & return it here.
-        Just (FileEntity _ _) →
-          return $ Right (fileStat ctx)
+        -- TODO: store stat info w/ file.
+        Just (FileEntity _ (File _ contents)) →
+          return $ Right (contentsFileStat ctx contents)
 
         Nothing → do
-          -- error "need a function that recursively looks up stats"
           fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
           if null fileEntities
             then return $ Left eNOENT
             else return $ Right (dirStat ctx)
-

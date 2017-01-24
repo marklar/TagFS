@@ -2,13 +2,18 @@
 
 module Stat.Base
   ( dirStat
-  , fileStat
   , getFileSystemStats
+  , contentsFileStat
+  , fileStat
   ) where
 
 
+import           Data.ByteString         (ByteString)
+import qualified Data.ByteString.Char8   as B
+
 import           System.Fuse
 import           System.Posix.Files   -- for file modes
+import           System.Posix.Types      (FileOffset)
 import           Debug                   (dbg)
 
 
@@ -42,6 +47,17 @@ dirStat ctx = FileStat { statEntryType = Directory
                        , statModificationTime = 0
                        , statStatusChangeTime = 0
                        }
+
+
+----------------------
+
+
+contentsFileStat ∷ FuseContext → ByteString → FileStat
+contentsFileStat ctx contents =
+  (fileStat ctx) { statFileSize = byteLen contents }
+  where
+    byteLen ∷ ByteString → FileOffset
+    byteLen = fromInteger . toInteger . B.length
 
 
 fileStat ∷ FuseContext → FileStat

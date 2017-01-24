@@ -11,12 +11,12 @@ module Node
   ) where
 
 
-import           Data.Maybe              (isJust)
-import           System.Fuse             (getFuseContext)
+import           Data.Maybe            (isJust)
+import           System.Fuse           (getFuseContext)
 
 import           DB.Base
-import           DB.Read                 (fileEntityNamed, tagEntityNamed)
-import           Stat.Base               (dirStat, fileStat)
+import           DB.Read               (fileEntityNamed, tagEntityNamed)
+import           Stat.Base             (dirStat, contentsFileStat)
 import           Types
 
 
@@ -46,7 +46,7 @@ entityToNode maybeEntity = do
   ctx ← getFuseContext
   case maybeEntity of
     Just (FileEntity _ (File _ contents)) →
-      return $ Just $ FileNode (fileStat ctx) contents
+      return $ Just $ FileNode (contentsFileStat ctx contents) contents
     Just (TagEntity _ (Tag _)) →
       return $ Just $ DirNode (dirStat ctx)
     Nothing →

@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE UnicodeSyntax       #-}
 
-module Device where
+module Device
+  ( tCreateDevice
+  ) where
 
 import qualified Data.ByteString.Char8   as B
 import           System.Fuse
@@ -45,6 +47,9 @@ tCreateDevice db filePath entryType mode deviceId = do
     _ → do
       dbg $ "Failed to create unknown device type with path: " ++ filePath
       return eNOENT
+
+
+---------------------
 
 
 tagFile ∷ DB → FileId → [TagName] → IO ()

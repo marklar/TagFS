@@ -14,17 +14,9 @@ createDb dbName = do
             "(id INTEGER PRIMARY KEY," ++
             " name VARCHAR NOT NULL UNIQUE)") []
 
-  -- TODO: Add attributes to Files (perhaps in 2 separate tables).
-  -- file metadata
-  --   absolute path
-  --   length
-  --   mtime, ctime, atime
-  --   inode (int)
-  -- file contents
-  --   sha (text)
-  --   data (blob)
-  --   length (int)
-  --   compressed (blob)
+  -- length
+  -- mtime, ctime, atime
+  -- inode (int)
   run conn ("CREATE TABLE files " ++
             "(id INTEGER PRIMARY KEY," ++
             " name VARCHAR NOT NULL," ++

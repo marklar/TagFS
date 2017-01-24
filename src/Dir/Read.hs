@@ -15,7 +15,7 @@ import           DB.Read
 import           DB.Write
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
-import           Stat.Base               (dirStat, fileStat)
+import           Stat.Base               (dirStat, contentsFileStat)
 
 
 {- | Entire contents of dir. Not just files - also sub-dirs (tags).
@@ -70,6 +70,6 @@ tagNamesWithStats db tagEntities = do
 fileNamesWithStats ∷ DB → [Entity] → IO [(FileName, FileStat)]
 fileNamesWithStats db fileEntities = do
   ctx ← getFuseContext
-  return $ flip map fileEntities (\(FileEntity _ (File name _)) →
-                                    (name, fileStat ctx))
+  return $ flip map fileEntities (\(FileEntity _ (File name contents)) →
+                                    (name, contentsFileStat ctx contents))
 

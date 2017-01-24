@@ -23,7 +23,7 @@ import           DB.Write                (updateFile)
 import           Debug                   (dbg)
 import           Node                    (fileNodeNamed)
 import           Parse
-import           Stat.Base
+import           Stat.Base               (contentsFileStat)
 import           Types
 
 
@@ -69,9 +69,8 @@ tReadFile db filePath _ bc offset = do
   case maybeEntity of
     Nothing →
       return $ Left eNOENT
-    Just (FileEntity fileId (File name contents)) → do
+    Just (FileEntity _ (File _ contents)) → do
       -- FIXME: Check readability permissions.
-      -- dbg $ "  Read: " ++ name ++ ", got: " ++ B.unpack contents
       return .
         Right .
         B.take (fromIntegral bc) .
@@ -95,7 +94,6 @@ tWriteFile db filePath _ bytes offset = do
 
   maybeEntity ← fileEntityFromPath db filePath
   case maybeEntity of
-    
     Nothing → do
       dbg $ "  didn't find file (" ++ filePath ++ ")"
       return (Left eNOENT)
@@ -104,7 +102,8 @@ tWriteFile db filePath _ bytes offset = do
       dbg $ "  found: -- " ++ name
       -- FIXME: need to store fStat in DB w/ file
       ctx ← getFuseContext
-      writeFile (fileStat ctx) (File name contents)
+      writeFile (contentsFileStat ctx contents) (File name contents)
+
   where
     writeFile fStat (File name contents) = do
       let contents' = B.take ((fromIntegral offset) - 1) contents <> bytes
