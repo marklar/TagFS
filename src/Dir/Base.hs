@@ -9,9 +9,9 @@ module Dir.Base
 
 import           System.Fuse
 
-import           DB.Find
-import           DB.Insert               -- (rmFileTag)   -- FIXME
 import           DB.Model
+import           DB.Read
+import           DB.Write
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
 
@@ -21,6 +21,7 @@ import           Parse                   (parseDirPath)
 openDir ∷ DB → FilePath → IO Errno
 openDir db filePath = do
   dbg $ "Opening dir " ++ filePath
+
   if filePath == "/"
     then return eOK
     else do fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
@@ -43,7 +44,7 @@ Answer: Rm FileTag 'bar' from files w/ both tags.
 removeDir ∷ DB → FilePath → IO Errno
 removeDir db filePath = do
   dbg $ "RemoveDir: " ++ filePath
-  -- Split filePath into [Tag].
+
   let tagNames = parseDirPath filePath
   -- Find all files (if any) with that (complete) tagSet.
   fileEntities ← fileEntitiesFromTags db tagNames

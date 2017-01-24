@@ -1,10 +1,11 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DB.Find
+module DB.Read
   ( allFileEntities
   , allTagEntities
   , fileEntitiesFromTags
   , fileEntityFromTagsAndName
+  , fileEntityFromPath
   , fileEntityNamed
   , tagEntityNamed
   , tagsForFileName
@@ -18,6 +19,17 @@ import           Database.HDBC            (SqlValue, fromSql, toSql)
 import           Debug
 import           DB.Model
 import           DB.Row                   (findRowById, findRowByName)
+import           Parse                    (parseFilePath)
+
+
+fileEntityFromPath ∷ DB → FilePath → IO (Maybe Entity)
+fileEntityFromPath db filePath = do
+  let (tagNames, maybeFileName) = parseFilePath filePath
+  case maybeFileName of
+    Nothing →
+      return Nothing
+    Just fileName → do
+      fileEntityFromTagsAndName db tagNames fileName
 
 
 allFileEntities ∷ DB → IO [Entity]

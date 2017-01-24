@@ -11,8 +11,8 @@ import           System.Posix.Types
 
 import           Debug                   (dbg)
 import           DB.Model
-import           DB.Find
-import           DB.Insert
+import           DB.Read
+import           DB.Write
 import           Parse
 import           Stat.Base               (dirStat, fileStat)
 import           Types

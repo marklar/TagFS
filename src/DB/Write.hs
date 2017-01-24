@@ -1,6 +1,6 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
-module DB.Insert
+module DB.Write
   ( mkFile
   , mkTag
   , mkFileTag

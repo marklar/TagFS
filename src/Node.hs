@@ -14,8 +14,8 @@ module Node
 import           Data.Maybe              (isJust)
 import           System.Fuse             (getFuseContext)
 
-import           DB.Find                 (fileEntityNamed, tagEntityNamed)
 import           DB.Model
+import           DB.Read                 (fileEntityNamed, tagEntityNamed)
 import           Stat.Base               (dirStat, fileStat)
 import           Types
 

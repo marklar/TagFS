@@ -10,9 +10,9 @@ import           Data.Maybe              (catMaybes)
 import           System.Fuse
 import           System.Posix.Types
 
-import           DB.Find
-import           DB.Insert               -- (rmFileTag)   -- FIXME
 import           DB.Model
+import           DB.Read
+import           DB.Write
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
 import           Stat.Base               (dirStat, fileStat)

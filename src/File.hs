@@ -5,7 +5,6 @@ module File
   ( tOpenFile
   , tReadFile
   , tWriteFile
-  , fileEntityFromPath
   ) where
 
 import           Data.ByteString         (ByteString)
@@ -18,9 +17,9 @@ import           System.IO
 import           System.Posix.Files
 import           System.Posix.Types
 
-import           DB.Find
 import           DB.Model
-import           DB.Insert               (updateFile)
+import           DB.Read
+import           DB.Write                (updateFile)
 import           Debug                   (dbg)
 import           Node                    (fileNodeNamed)
 import           Parse
@@ -113,16 +112,3 @@ tWriteFile db filePath _ bytes offset = do
           -- fileNode = FileNode (fStat { statFileSize = fileSize }) contents'
       updateFile db (File name contents')
       return $ Right (fromIntegral . B.length $ bytes)
-
-
-------------------------
-
--- TODO: Move this to utils.
-fileEntityFromPath ∷ DB → FilePath → IO (Maybe Entity)
-fileEntityFromPath db filePath = do
-  let (tagNames, maybeFileName) = parseFilePath filePath
-  case maybeFileName of
-    Nothing →
-      return Nothing
-    Just fileName → do
-      fileEntityFromTagsAndName db tagNames fileName

@@ -7,8 +7,8 @@ import           System.Fuse
 
 import           Debug                   (dbg)
 import           DB.Model
-import           DB.Find                 (fileEntitiesFromTags)
-import           File                    (fileEntityFromPath)  -- TODO: mv to utils
+import           DB.Read                 ( fileEntitiesFromTags
+                                         , fileEntityFromPath )
 import           Parse                   (parseDirPath)
 import           Stat.Base               (dirStat, fileStat)
 

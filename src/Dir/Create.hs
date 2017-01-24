@@ -8,9 +8,9 @@ module Dir.Create
 import           System.Fuse
 import           System.Posix.Types      (FileMode)
 
-import           DB.Find
-import           DB.Insert
 import           DB.Model
+import           DB.Read
+import           DB.Write
 import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
 import           Stat.Base               (dirStat)

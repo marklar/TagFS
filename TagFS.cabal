@@ -18,9 +18,9 @@ library
   exposed-modules:     DB.Model
                      , DB.Create
                      -- , DB.Exists
-                     , DB.Find
-                     , DB.Insert
+                     , DB.Read
                      , DB.Row
+                     , DB.Write
                      , Debug
                      , Device
                      , Dir.Base
