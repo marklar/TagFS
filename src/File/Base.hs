@@ -5,6 +5,7 @@ module File.Base
   ( tOpenFile
   , tReadFile
   , tWriteFile
+  , tSetFileTimes
   ) where
 
 import           Data.ByteString         (ByteString)
@@ -111,3 +112,11 @@ tWriteFile db filePath _ bytes offset = do
           -- fileNode = FileNode (fStat { statFileSize = fileSize }) contents'
       updateFile db (File name contents')
       return $ Right (fromIntegral . B.length $ bytes)
+
+
+--------------
+
+
+tSetFileTimes ∷ DB → FilePath → EpochTime → EpochTime → IO Errno
+tSetFileTimes db filePath t1 t2 = return eOK
+

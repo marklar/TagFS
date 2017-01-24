@@ -11,9 +11,11 @@ import           DB.Base                 (DB)
 import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)
-import           File.Base               (tOpenFile, tReadFile, tWriteFile)
+import           File.Base               ( tOpenFile, tReadFile
+                                         , tWriteFile, tSetFileTimes)
 import           File.Create             (tCreateDevice)
 import           File.Remove             (tRemoveLink)
+import           File.Rename             (tRenameFile)
 import           Stat.Base               (getFileSystemStats)
 import           Stat.File               (getFileStat)
 import           Types
@@ -39,9 +41,13 @@ runFuse db = do
 
       -- File
       , fuseCreateDevice       = tCreateDevice db
-      , fuseOpen               = tOpenFile  db
-      , fuseRead               = tReadFile  db
-      , fuseWrite              = tWriteFile db
+      , fuseOpen               = tOpenFile     db
+      , fuseRead               = tReadFile     db
+      , fuseWrite              = tWriteFile    db
+      , fuseRename             = tRenameFile   db
+      , fuseSetFileMode        = \_ _ → return eOK
+      -- fuseSetOwnerAndGroup
+      -- fuseSetFileSize
 
       -- Any kind of entry (node)
       , fuseGetFileStat        = getFileStat   db
@@ -49,17 +55,15 @@ runFuse db = do
       , fuseRemoveLink         = tRemoveLink   db
       -- , fuseSetFileTimes       = tSetFileTimes db
 
+      -- Links
       -- fuseReadSymbolicLink
       -- fuseCreateSymbolicLink
-      -- fuseRename
       -- fuseCreateLink
-      , fuseSetFileMode        = \_ _ → return eOK
-      -- fuseSetOwnerAndGroup
-      -- fuseSetFileSize
+
       -- fuseFlush
       , fuseRelease            = \_ _ → return ()
-      -- fuseSynchronizeFile
       -- fuseReleaseDirectory
+      -- fuseSynchronizeFile
       -- fuseSynchronizeDirectory
       -- fuseInit
       -- fuseDestroy
@@ -68,10 +72,6 @@ runFuse db = do
 
 
 --------------------
-
-
-tSetFileTimes ∷ DB → FilePath → EpochTime → EpochTime → IO Errno
-tSetFileTimes db filePath t1 t2 = return eOK
 
 
 {- | This is the same as the access(2) system call.

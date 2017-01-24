@@ -8,13 +8,13 @@ module File.Create
 import qualified Data.ByteString.Char8   as B
 import           System.Fuse
 import           Data.Maybe              (catMaybes)
-import           System.Posix.Files
-import           System.Posix.Types
+import           System.Posix.Types      (FileMode, DeviceID)
 
 import           Debug                   (dbg)
 import           DB.Base
-import           DB.Read
+import           DB.Read                 (fileEntityNamed)
 import           DB.Write
+import           File.Util               (tagFile)  -- move to DB.Write?
 import           Parse
 import           Stat.Base               (dirStat, fileStat)
 import           Types
@@ -50,13 +50,6 @@ tCreateDevice db filePath entryType mode deviceId = do
 
 
 ---------------------
-
-
-tagFile ∷ DB → FileId → [TagName] → IO ()
-tagFile db fileId tagNames = do
-  maybeTagEntities ← mapM (tagEntityNamed db) tagNames
-  let tagIds = map tagId (catMaybes maybeTagEntities)
-  mapM_ (mkFileTag db fileId) tagIds
 
 
 createNewFile ∷ DB → FileName → FileMode → IO FileId

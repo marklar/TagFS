@@ -26,7 +26,7 @@ tRemoveLink db filePath = do
     Nothing →
       return eNOENT
 
-    Just (FileEntity fileId (File fileName contents)) → do
+    Just (FileEntity fileId _) → do
       let (tagNames, _) = parseFilePath filePath
       if null tagNames
         then rmFile db fileId   -- & all associated FileTags

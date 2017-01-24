@@ -27,6 +27,8 @@ library
                      , File.Base
                      , File.Create
                      , File.Remove
+                     , File.Rename
+                     , File.Util
                      , FuseOps
                      , Node
                      , Parse
