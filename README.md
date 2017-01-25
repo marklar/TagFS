@@ -35,28 +35,37 @@ as possible.
 
 
 Files:
-+ `cp <source.txt> <target.txt>`
-  - So long as `target.txt` doesn't already exist (regardless of
-  tags), `cp` works as expected.
-  - If `target.txt` *does* exist, `cp` currently creates an *empty*
-  file `target(0).txt` (but with the proper tags).
++ `ln <source.txt> <target-dir>`
+  - For tagging files. (Doesn't actually create a link.)
+  - Does not allow 'linking' to a file of a different name. It merely
+    adds any novel tags to the file.
 + `mv <source.txt> <target.txt>`
-  - In TagFS, `mv` is for tagging files.
+  - In TagFS, `mv` is also for tagging *and* untagging files.
   - If `target.txt` doesn't exist (anywhere), then:
     + If changing 'directories', `mv` associates a different set of
-    tags with the file.
-	+ If changing names, that works, too.
+      tags with the file. It removes the last tag from `source.txt`'s
+      path and adds any novel tags from `target.txt`'s path.
+	+ If changing names, that works, too. In addition to changing the
+      set of tags on the file, it also renames the file.
   - If a file named `target.txt` does already exist, `mv` refuses to
     overwrite it, reporting that 'File exists'. That may be surprising
     behavior, as outside of TagFS `source.txt` would simply overwrite
     `target.txt` (i.e. `source.txt` gets renamed to `target.txt`, and
-    what was `target.txt` goes away).
-+ `rm`
-  - Works as designed.
-  - It removes tags from file. If `rm` from root dir (`/`), the file
-    is actually removed. If `rm` from within a tag 'directory', the
-    'last' tag specified in the path is removed from the tag, but the
-    file itself isn't removed from the FS.
+    what was `target.txt` goes away). This is fixable, but I haven't
+    gotten around to it yet.
++ `cp <source.txt> <target.txt>`
+  - For copying *content* from one file to another.
+  - So long as `target.txt` doesn't already exist (regardless of
+    tags), `cp` works as expected, creating a new file and tagging it
+    as you'd expect.
+  - If `target.txt` *does* exist, `cp` currently creates an *empty*
+  file `target(0).txt` (but with the proper tags).
++ `rm` (or `unlink`)
+  - In TagFS, `rm` is for un-tagging files.
+  - If `rm` from within a tag 'directory', the 'last' tag specified in
+    the path is removed from the tag, but the file itself isn't
+    removed from the FS.
+  - If `rm` from root dir (`/`), the file is actually deleted.
 
 
 Tags (directories):

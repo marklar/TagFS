@@ -12,7 +12,7 @@ import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)
 import           File.Base               (tOpenFile, tReadFile, tSetFileTimes)
-import           File.Create             (tCreateDevice)
+import           File.Create             (tCreateDevice, tCreateLink)
 import           File.Remove             (tRemoveLink)
 import           File.Rename             (tRenameFile)
 import           File.Write              (tWriteFile, setFileSize)
@@ -58,7 +58,7 @@ runFuse db = do
       -- LINKS
       -- fuseReadSymbolicLink
       -- fuseCreateSymbolicLink
-      -- fuseCreateLink
+      , fuseCreateLink         = tCreateLink db
 
       -- FLUSH
       -- fuseFlush

@@ -3,6 +3,7 @@
 
 module File.Create
   ( tCreateDevice
+  , tCreateLink
   ) where
 
 import qualified Data.ByteString.Char8   as B
@@ -13,13 +14,48 @@ import           System.FilePath.Posix   (splitExtension, addExtension)
 
 import           Debug                   (dbg)
 import           DB.Base
-import           DB.Read                 (fileEntityNamed)
+import           DB.Read                 (fileEntityNamed, fileEntityFromPath)
 import           DB.Write
 import           File.Util               (tagFile)  -- move to DB.Write?
 import           File.Version            (versionedFileName)
 import           Parse
 import           Stat.Base               (dirStat, fileStat)
 import           Types
+
+
+{- | Doesn't actually create a link. Instead, it adds tags to an
+   existing file.
+-}
+tCreateLink ∷ DB → FilePath → FilePath → IO Errno
+tCreateLink db fromPath toPath = do
+  dbg $ "CreateLink: " ++ fromPath ++ ", " ++ toPath
+
+  -- What we want is for fromPath and toPath to be:
+  --  + alike in name, but
+  --  + different in tags.
+
+  if pathsDiffer && namesMatch
+    -- Add toTags which file may currently lack.
+    then do maybeFileEntity ← fileEntityFromPath db fromPath
+            case maybeFileEntity of
+              Nothing → return eNOENT
+              Just (FileEntity fileId _) → do
+                tagFile db fileId toTags
+                return eOK
+    else return eINVAL -- eINVAL | ePERM | eACCES
+    -- eACCES - permission denied
+    -- eINVAL - invalid argument
+    -- ePERM  - operation not permitted
+    -- http://www.virtsync.com/c-error-codes-include-errno
+
+  where
+    pathsDiffer = fromPath /= toPath
+    namesMatch = maybeFromName == maybeToName
+    (fromTags, maybeFromName) = parseFilePath fromPath
+    (toTags,   maybeToName)   = parseFilePath toPath
+
+
+----------------------------
 
 
 {- | If asked to create a RegularFile, create an empty one w/ provided
