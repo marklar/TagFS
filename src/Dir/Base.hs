@@ -16,7 +16,7 @@ import           Debug                   (dbg)
 import           Parse                   (parseDirPath)
 
 
-{- | If filePath maps to a dir: eOK. Else: eNOENT.
+{- | If filePath maps to a dir: eOK. Else: eNOTDIR.
 -}
 openDir ∷ DB → FilePath → IO Errno
 openDir db filePath = do
@@ -26,7 +26,7 @@ openDir db filePath = do
     then return eOK
     else do fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
             if null fileEntities
-              then return eNOENT
+              then return eNOTDIR
               else do dbg "  Found dir"
                       return eOK
 
@@ -36,10 +36,10 @@ openDir db filePath = do
 
 E.g.
 $ rmdir /foo/bar
-Delete tag 'bar' (but not 'foo')?
-Delete tags 'foo' and 'bar' both?
 
-Answer: Rm FileTag 'bar' from files w/ both tags.
+Rm FileTag 'bar' from files w/ both tags 'foo' and 'bar'.
+
+If Tag 'bar' no longer has any FileTags, then delete the Tag.
 -}
 removeDir ∷ DB → FilePath → IO Errno
 removeDir db filePath = do
@@ -49,8 +49,14 @@ removeDir db filePath = do
   -- Find all files (if any) with that (complete) tagSet.
   fileEntities ← fileEntitiesFromTags db tagNames
   if null fileEntities
-    then return eNOENT
+    then return eNOTDIR
     else do let tagName = last tagNames
             -- Untag last tag from each.
             mapM_ (\f → rmFileTag db (fileId f) tagName) fileEntities
+            -- Does tagName have any associated FileTags?
+            -- If not, then kill the Tag.
+            hasFile ← tagHasFile db tagName
+            if hasFile
+              then return ()
+              else rmTag db tagName
             return eOK

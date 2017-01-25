@@ -8,6 +8,7 @@ module DB.Write
   , renameFile
   , rmFile
   , rmFileTag
+  , rmTag
   , updateContents
   ) where
 
@@ -49,6 +50,14 @@ mkTag conn (Tag name) = do
   let sql = "INSERT INTO tags " ++
             "VALUES      (?, ?)"
       args = [SqlNull, toSql name]
+  execWithClone conn sql args
+
+
+rmTag ∷ DB → TagName → IO ()
+rmTag conn name = do
+  let sql = "DELETE FROM tags " ++
+            "WHERE       name = ?"
+      args = [toSql name]
   execWithClone conn sql args
 
 

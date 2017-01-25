@@ -8,6 +8,7 @@ module DB.Read
   , fileEntityFromPath
   , fileEntityNamed
   , tagEntityNamed
+  , tagHasFile
   , tagsForFileName
   ) where
 
@@ -104,6 +105,11 @@ tagEntityNamed conn name = do
 
 ---------------------
 ---------------------
+
+tagHasFile ∷ DB → TagName → IO Bool
+tagHasFile conn tagName = do
+  fileIds ← fileIdsForTag conn tagName
+  return $ not (null fileIds)
 
 
 fileIdsForTag ∷ DB → TagName → IO [FileId]

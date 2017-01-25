@@ -48,5 +48,5 @@ getFileStat db filePath = do
         Nothing → do
           fileEntities ← fileEntitiesFromTags db (parseDirPath filePath)
           if null fileEntities
-            then return $ Left eNOENT
+            then return $ Left eNOENT   -- do *not* use eNOTDIR
             else return $ Right (dirStat ctx)
