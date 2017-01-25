@@ -70,8 +70,9 @@ Files:
 
 Tags (directories):
 + `ls`
-  - Shows (normally) hidden file (`.dummy`).
-  - Shows other tags, even tho' they're empty (but for `.dummy`)
+  - With -a option, shows `.dummy` file.
+  - Includes all other tags as 'subdirs', even if they're empty (but
+    for `.dummy`). Feature? Bug?
 + `mkdir`
   - Creates a new tag.
   - File `.dummy` is tagged with it.
