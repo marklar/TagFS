@@ -51,7 +51,7 @@ Files:
     overwrite it, reporting that 'File exists'. That may be surprising
     behavior, as outside of TagFS `source.txt` would simply overwrite
     `target.txt` (i.e. `source.txt` gets renamed to `target.txt`, and
-    what was `target.txt` goes away). This is fixable, but I haven't
+    what was `target.txt` goes away). This is feasible, but I haven't
     gotten around to it yet.
 + `cp <source.txt> <target.txt>`
   - For copying *content* from one file to another.
@@ -70,13 +70,16 @@ Files:
 
 Tags (directories):
 + `ls`
-  - shows hidden file (`.dummy`)
-  - shows other tags, even tho' they're empty (but for `.dummy`)
+  - Shows (normally) hidden file (`.dummy`).
+  - Shows other tags, even tho' they're empty (but for `.dummy`)
 + `mkdir`
-  - creates a new tag
-  - contains `.dummy`
+  - Creates a new tag.
+  - File `.dummy` is tagged with it.
 + `rmdir`
-  - Fails to remove dir from display, even though empty (removes `.dummy`)
+  - For untagging. Removes 'last' tag from path for each file in that
+    path.
+  - If no more files are tagged with this tag, the tag itself is
+    deleted.
 
 
 ### Work as you'd expect
