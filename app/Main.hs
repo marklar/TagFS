@@ -1,17 +1,15 @@
 {-# LANGUAGE UnicodeSyntax #-}
 module Main where
 
+import           System.Environment
 import           DB.Base
 import           DB.Create
 import           FuseOps
 
 
-dbFile ∷ FilePath
-dbFile = "/Users/markwong-vanharen/Development/TagFS/flurbl.db"
-
-
 main ∷ IO ()
 main = do
-  -- createDb dbFile
+  dbFile ← getEnv "TAGFS_DB"
+  createDb dbFile
   db ← connect dbFile
   runFuse db

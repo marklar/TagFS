@@ -17,6 +17,10 @@ import           Parse                   (parseDirPath)
 import           Stat.Base               (dirStat)
 
 
+dummyFileName ∷ String
+dummyFileName = ".dummy"
+
+
 {- | Create new tags (as necessary) for dirs in path.
 -}
 createDir ∷ DB → FilePath → FileMode → IO Errno
@@ -34,19 +38,6 @@ createDir db filePath mode = do
       tagIds ← mapM (findOrCreateTagId db) tagNames
       mapM_ (ensureFileTag db dummyFileId) tagIds
       return eOK
-
-
--- ^ find or make
-ensureFileTag ∷ DB → FileId → TagId → IO ()
-ensureFileTag db fileId tagId = do
-  let sql = "SELECT  * " ++
-            "FROM    files_tags " ++
-            "WHERE   file_id = ? " ++
-            "AND     tag_id  = ?"
-  rows ← queryWithClone db sql [toSql fileId, toSql tagId]
-  if null rows
-    then mkFileTag db fileId tagId
-    else return ()
 
 
 newDirStat ∷ FileMode → IO FileStat
@@ -68,10 +59,10 @@ findOrCreateTagId db tagName = do
 
 findOrCreateDummyFileId ∷ DB → IO FileId
 findOrCreateDummyFileId db = do
-  maybeFileEntity ← fileEntityNamed db "dummy"
+  maybeFileEntity ← fileEntityNamed db dummyFileName
   case maybeFileEntity of
     Just fe →
       return $ fileId fe
     Nothing → do
-      mkFile db (File "dummy" "")
+      mkFile db (File dummyFileName "")
       findOrCreateDummyFileId db

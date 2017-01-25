@@ -1,0 +1,25 @@
+#!/bin/bash
+
+#---------------------------------
+#
+# Modify the values of these environment variables as you wish:
+#
+#   TAGFS_MOUNT_POINT
+#       Important; it's where you use the TagFS.
+#
+#   TAGFS_DB
+#       Unimportant; TagFS-internal.
+#
+#---------------------------------
+
+
+# export TAGFS_MOUNT_POINT="/Volumes/TagFS"
+export TAGFS_MOUNT_POINT="$PWD/mnt"
+
+# Note: This path must be absolute (not relative).
+export TAGFS_DB="$PWD/tagfs.db"
+
+# `exec` is predicated on success of `build`.
+stack build && stack exec TagFS-exe $TAGFS_MOUNT_POINT
+
+echo "To use: cd $TAGFS_MOUNT_POINT"

@@ -10,19 +10,19 @@ createDb ∷ FilePath → IO ()
 createDb dbName = do
   conn ← connect dbName
 
-  run conn ("CREATE TABLE tags " ++
+  run conn ("CREATE TABLE IF NOT EXISTS tags " ++
             "(id INTEGER PRIMARY KEY," ++
             " name VARCHAR NOT NULL UNIQUE)") []
 
   -- length
   -- mtime, ctime, atime
   -- inode (int)
-  run conn ("CREATE TABLE files " ++
+  run conn ("CREATE TABLE IF NOT EXISTS files " ++
             "(id INTEGER PRIMARY KEY," ++
             " name VARCHAR NOT NULL," ++
             " contents BLOB NOT NULL)") []
 
-  run conn ("CREATE TABLE files_tags " ++
+  run conn ("CREATE TABLE IF NOT EXISTS files_tags " ++
             "(id INTEGER PRIMARY KEY," ++
             " file_id INTEGER NOT NULL REFERENCES files," ++
             " tag_id INTEGER NOT NULL REFERENCES tags," ++

@@ -1,12 +1,14 @@
 {-# LANGUAGE UnicodeSyntax              #-}
 
 module DB.Write
-  ( mkFile
-  , mkTag
+  ( ensureFileTag
+  , mkFile
   , mkFileTag
-  , updateFile
-  , rmFileTag
+  , mkTag
+  , renameFile
   , rmFile
+  , rmFileTag
+  , updateContents
   ) where
 
 
@@ -16,12 +18,21 @@ import           DB.Base
 import           Debug
 
 
-updateFile ∷ DB → File → IO ()
-updateFile conn (File name contents) = do
+updateContents ∷ DB → File → IO ()
+updateContents conn (File name contents) = do
   let sql = "UPDATE files " ++
             "SET    contents = ? " ++
             "WHERE  name = ?"
       args = [toSql contents, toSql name]
+  execWithClone conn sql args
+
+
+renameFile ∷ DB → FileId → FileName → IO ()
+renameFile conn fileId newName = do
+  let sql = "UPDATE files " ++
+            "SET    name = ? " ++
+            "WHERE  id = ?"
+      args = [toSql newName, toSql fileId]
   execWithClone conn sql args
 
 
@@ -39,6 +50,31 @@ mkTag conn (Tag name) = do
             "VALUES      (?, ?)"
       args = [SqlNull, toSql name]
   execWithClone conn sql args
+
+
+-- ensureFileTag ∷ DB → FileId → TagId → IO ()
+-- ensureFileTag conn fileId tagId =
+--   catchSql res
+--     (\e → do
+--         dbg $ "ERROR: " ++ show e
+--         if seNativeError e == 19
+--           then return ()
+--           else res)
+--   where
+--     res = mkFileTag conn fileId tagId
+
+
+-- ^ find or make
+ensureFileTag ∷ DB → FileId → TagId → IO ()
+ensureFileTag db fileId tagId = do
+  let sql = "SELECT  * " ++
+            "FROM    files_tags " ++
+            "WHERE   file_id = ? " ++
+            "AND     tag_id  = ?"
+  rows ← queryWithClone db sql [toSql fileId, toSql tagId]
+  if null rows
+    then mkFileTag db fileId tagId
+    else return ()
 
 
 mkFileTag ∷ DB → FileId → TagId → IO ()

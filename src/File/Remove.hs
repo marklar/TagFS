@@ -7,10 +7,10 @@ import           System.Fuse
 
 import           DB.Base
 import           DB.Read                 (fileEntityFromPath)
-import           DB.Write                (rmFile, rmFileTag)
 import           Debug                   (dbg)
 import           Node                    (nodeNamed)
 import           Parse
+import           File.Util               (rmLastTag)
 
 
 {- | unlink(const char* path)
@@ -27,8 +27,5 @@ tRemoveLink db filePath = do
       return eNOENT
 
     Just (FileEntity fileId _) → do
-      let (tagNames, _) = parseFilePath filePath
-      if null tagNames
-        then rmFile db fileId   -- & all associated FileTags
-        else rmFileTag db fileId (last tagNames)
+      rmLastTag db fileId filePath
       return eOK

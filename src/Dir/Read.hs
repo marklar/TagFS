@@ -44,7 +44,7 @@ readDir db filePath = do
             if null fileEntities
               then return $ Left eNOENT
               else do files ← fileNamesWithStats db fileEntities
-                      -- TODO: delete 'dummy' from files
+                      -- TODO: delete '.dummy' from files
                       tagEntities ← allTagsForFilesExcept db fileEntities tagNames
                       -- filter out the ones whose name match here
                       tags ← tagNamesWithStats db tagEntities

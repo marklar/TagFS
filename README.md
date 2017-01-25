@@ -1,14 +1,19 @@
 
-# TagFS
+# Using TagFS
 
 
-## DB
+## Deploying TagFS
 
-SQLite db for entities:
-+ Tag (directory / set)
-+ File
-+ Tagging (association)
+First, install TagFS: [Install](docs/Install.md).
 
-What to include in File?
-Do we need a User entity?
+Then run it:
 
+1. Modify env vars in shell script `./run` as desired.
+2. `$ chmod +x run`
+3. Run it: `$ ./run`
+
+And finally, go to the TagFS volume: `$ cd <your-mount-point>` (=
+`$TAGFS_MOUNT_POINT`).
+
+
+## Commands

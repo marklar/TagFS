@@ -25,17 +25,20 @@ getFileStat db filePath = do
   ctx ← getFuseContext
 
   case filePath of
-
-    -- What the hell is this?
     "/._." →
       return $ Left eNOENT
 
-    -- Root dir: show all files & tags.
     "/" → do
       return $ Right (dirStat ctx)
 
     -- File or Dir?
     _ → do
+
+      -- TODO:
+      -- If filePath has a fileName with a version number in it,
+      -- then we want to cheat here and return fStat of whatever
+      -- version of that file actually is in this directory.
+
       maybeFileEntity ← fileEntityFromPath db filePath
       case maybeFileEntity of
         -- TODO: store stat info w/ file.

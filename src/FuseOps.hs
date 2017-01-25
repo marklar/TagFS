@@ -11,11 +11,11 @@ import           DB.Base                 (DB)
 import           Dir.Base                (openDir, removeDir)
 import           Dir.Create              (createDir)
 import           Dir.Read                (readDir)
-import           File.Base               ( tOpenFile, tReadFile
-                                         , tWriteFile, tSetFileTimes)
+import           File.Base               (tOpenFile, tReadFile, tSetFileTimes)
 import           File.Create             (tCreateDevice)
 import           File.Remove             (tRemoveLink)
 import           File.Rename             (tRenameFile)
+import           File.Write              (tWriteFile, setFileSize)
 import           Stat.Base               (getFileSystemStats)
 import           Stat.File               (getFileStat)
 import           Types
@@ -33,13 +33,13 @@ runFuse db = do
       defaultFuseOps
       { fuseGetFileSystemStats = getFileSystemStats
 
-      -- Dir
+      -- DIR
       , fuseCreateDirectory    = createDir db
       , fuseOpenDirectory      = openDir   db
       , fuseRemoveDirectory    = removeDir db
       , fuseReadDirectory      = readDir   db
 
-      -- File
+      -- FILE
       , fuseCreateDevice       = tCreateDevice db
       , fuseOpen               = tOpenFile     db
       , fuseRead               = tReadFile     db
@@ -47,7 +47,7 @@ runFuse db = do
       , fuseRename             = tRenameFile   db
       , fuseSetFileMode        = \_ _ → return eOK
       -- fuseSetOwnerAndGroup
-      -- fuseSetFileSize
+      , fuseSetFileSize        = setFileSize   db
 
       -- Any kind of entry (node)
       , fuseGetFileStat        = getFileStat   db
@@ -55,16 +55,23 @@ runFuse db = do
       , fuseRemoveLink         = tRemoveLink   db
       -- , fuseSetFileTimes       = tSetFileTimes db
 
-      -- Links
+      -- LINKS
       -- fuseReadSymbolicLink
       -- fuseCreateSymbolicLink
       -- fuseCreateLink
 
+      -- FLUSH
       -- fuseFlush
+
+      -- RELEASE
       , fuseRelease            = \_ _ → return ()
       -- fuseReleaseDirectory
+
+      -- SYNCHRONIZE
       -- fuseSynchronizeFile
       -- fuseSynchronizeDirectory
+
+      -- SETUP, TAKEDOWN
       -- fuseInit
       -- fuseDestroy
       }
