@@ -7,9 +7,14 @@ module File.Rename
 
 
 import           System.Fuse
+import           Control.Monad        (liftM)
+import           Data.Maybe           (isNothing, fromMaybe)
+
 import           DB.Base
 import           DB.Read              (fileEntityFromPath)
 import           DB.Write             (rmFileTag, renameFile)
+import           DB.Row               (findRowByName)
+
 
 import           Debug
 import           File.Util            (tagFile)
@@ -26,20 +31,40 @@ data Move = Retagging  -- ^ mv /a/y.txt /b/y.txt   (same name, diff dir)
 tRenameFile ∷ DB → FilePath → FilePath → IO Errno
 tRenameFile db fromPath toPath = do
   dbg $ "RenameFile: " ++ fromPath ++ " " ++ toPath
-  maybeEntity ← fileEntityFromPath db fromPath
-  case maybeEntity of
-    Nothing →
-      return eNOENT
 
-    Just (FileEntity fileId _) →
-      f db fileId fromPath toPath
-      where f = case moveType fromPath toPath of
-              Retagging →
-                retagging
-              Renaming →
-                renaming
-              Both →
-                bothChanges
+  ok ← okToName db fromPath toPath
+  if not ok
+    then return eEXIST
+    else do maybeEntity ← fileEntityFromPath db fromPath
+            case maybeEntity of
+              Nothing →
+                return eNOENT
+
+              Just (FileEntity fileId _) →
+                f db fileId fromPath toPath
+                where f = case moveType fromPath toPath of
+                        Retagging →
+                          retagging
+                        Renaming →
+                          renaming
+                        Both →
+                          bothChanges
+
+
+-- If toName is different from fromName *and*
+-- there already ∃ another file called toName,
+-- then return eNOENT (or eEXIST)?
+okToName ∷ DB → FilePath → FilePath → IO Bool
+okToName db fromPath toPath =
+  if sameName
+  then return True
+  else noSuchFileExists
+  where
+    noSuchFileExists = liftM isNothing $ findRowByName db "files" toName
+    sameName = maybeFromName == maybeToName
+    toName = fromMaybe "" maybeToName
+    (_, maybeFromName) = parseFilePath fromPath
+    (_, maybeToName)   = parseFilePath toPath
 
 
 ----------------
@@ -54,6 +79,7 @@ bothChanges db fileId fromPath toPath = do
   renaming  db fileId fromPath toPath
 
 
+-- FIXME: If toPath's name already ∃, don't rename.
 renaming ∷ MoveFn
 renaming db fileId fromPath toPath = do
   dbg "  - renaming"

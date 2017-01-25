@@ -36,8 +36,8 @@ import           Types
 -}
 tOpenFile ∷ DB
           → FilePath
-          → OpenMode         -- FUSE: ReadOnly | WriteOnly | ReadWrite
-          → OpenFileFlags    -- FUSE: append | exclusive | noctty | nonBlock | trunc
+          → OpenMode       -- FUSE: ReadOnly | WriteOnly | ReadWrite
+          → OpenFileFlags  -- FUSE: append | exclusive | noctty | nonBlock | trunc
           → IO (Either Errno NonHandle)
 tOpenFile db filePath mode flags = do
   dbg $ "OpenFile: " ++ filePath
@@ -73,11 +73,9 @@ tReadFile db filePath _ bc offset = do
       --
       -- FIXME: Check readability permissions.
       --
-      return .
-        Right .
-        B.take (fromIntegral bc) .
-        B.drop (fromIntegral offset) $
-        contents
+      return $ Right (getBytes contents)
+    where
+      getBytes = B.take (fromIntegral bc) . B.drop (fromIntegral offset)
 
 
 --------------

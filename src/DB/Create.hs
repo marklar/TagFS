@@ -19,7 +19,7 @@ createDb dbName = do
   -- inode (int)
   run conn ("CREATE TABLE IF NOT EXISTS files " ++
             "(id INTEGER PRIMARY KEY," ++
-            " name VARCHAR NOT NULL," ++
+            " name VARCHAR NOT NULL UNIQUE," ++
             " contents BLOB NOT NULL)") []
 
   run conn ("CREATE TABLE IF NOT EXISTS files_tags " ++
